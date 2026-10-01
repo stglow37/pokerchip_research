@@ -1,3 +1,10 @@
+<!-- V5 RELEASE -->
+# v5 변경 범위
+
+Farkas/IFR의 물리식·부호·지원 범위는 변경하지 않았다. 자동 구간과 자동 탐색 피팅 포함 기준은 [ADR-007](../decisions/ADR-007-v5-observation-first.md), 추가 데이터 계약은 [V5_DATA_ADDITIONS_KO.md](V5_DATA_ADDITIONS_KO.md)를 따른다. 법선 EIV와 충돌 시각 상태 covariance를 보완했으며, 조건부 불확실성을 독립 정확도라고 표시하지 않는다.
+
+---
+
 # 수학 모델과 구현 결정
 
 버전 1.0.0. SI 내부 단위, world x/y 평면, y 위쪽, 각도·각속도 반시계 양수입니다. 상태는 `[x,y,vx,vy,theta,omega]`입니다. 영상 pixel y는 아래쪽입니다. 입력 논문과 전달 메모는 검토 자료이며, 인쇄식을 무조건 정확하다고 취급하지 않았습니다.

@@ -1,3 +1,10 @@
+<!-- V5 RELEASE -->
+# 현재 릴리스 v5.0
+
+현재 사용법은 `docs/operations/README_V5_KO.md`, 요구사항 대응은 `docs/development/V5_REQUIREMENTS_KO.md`, 검증 증거는 `validation/test-records/v5/REPORT_KO.md`가 정본이다. 자동 구간은 사람 승인과 구분한다. 아래 v4.5/v4 내용은 계승 원칙과 과거 기록이다.
+
+---
+
 <!-- V45 RELEASE -->
 # 현재 릴리스 안내
 

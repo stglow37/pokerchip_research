@@ -1,0 +1,17 @@
+{
+  "video": "C007_20261001_204700.mp4",
+  "sha256": "43cf29015ba0c639c1eebd042a9434fd169c1d1a76e066fecfa3ef2e99a7b66f",
+  "frame_index_base": 0,
+  "visual_transition_range": [
+    113,
+    116
+  ],
+  "first_clearly_separated_in_review": 116,
+  "automatic_start": 120,
+  "scope": "single_developer_visual_review_not_independent_ground_truth",
+  "limitations": [
+    "113–115 have occlusion and motion blur; exact last physical contact is unresolved.",
+    "Difference is approximately 4–7 frames, 17–29 ms at 240 Hz.",
+    "Do not use this development observation to claim overall release-detection accuracy."
+  ]
+}

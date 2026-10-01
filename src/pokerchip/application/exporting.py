@@ -73,7 +73,7 @@ def export_run(run):
         from ..analysis.quality import enrich_quality
         quality=enrich_quality(db,quality,config,experiment)
         quality['measurement_status']='review_required' if quality['review_frame_count'] or not angles else 'provisional_measurements_available'
-        quality['initial_30_observations']=sum(1 for r in db.rows('observations') if r['frame_index']<30)
+        quality['initial_30_observations']=sum(1 for r in db.rows('observations') if experiment['interval'][0]<=r['frame_index']<experiment['interval'][0]+30)
         quality['blur_review_rows']=sum(bool(r.get('measurement_warning')) for r in db.rows('observations'))
         quality['floor_boundary_rows']=sum(r.get('surface_status')=='floor_boundary' for r in db.rows('observations'))
         grouped={}
@@ -152,6 +152,8 @@ def plot_trajectories(db,path):
         ax.set_title(title,fontsize=10);ax.grid(alpha=.25)
         if rows:ax.legend(fontsize=7)
     for ax in (axes[0,1],axes[1,0],axes[1,1]):ax.set_xlabel("decoded frame index")
+    axes[0,0].set_aspect("equal",adjustable="datalim")
+    if rows and not all(r.get("world_center_m") is not None for r in rows):axes[0,0].invert_yaxis()
     fig.savefig(path,dpi=140);plt.close(fig)
 
 
@@ -169,10 +171,8 @@ def overlay(run,source,destination=None):
             for timing,image in frames(source,start=exp["interval"][0],end=exp["interval"][1]):
                 f=timing["frame_index"]
                 records=list(db.rows("manual",start=f,end=f));ft=next(db.rows("frames",start=f,end=f),timing)
-                for row in records:
-                    center=tuple(np.round(row["raw_center_px"]).astype(int));radius=int(row["radius_px"])
-                    color=(50,200,40) if row.get("source")!="manual_corrected" else (0,200,255)
-                    cv2.circle(image,center,radius,color,2);cv2.putText(image,row["chip_id"],(center[0]-radius,center[1]-radius-5),cv2.FONT_HERSHEY_SIMPLEX,.6,color,2)
+                from ..measurement.overlay import draw_observation
+                for row in records:draw_observation(image,row)
                 label=f"frame {f} | presentation {timing['presentation_time_s']} s | physical {ft.get('physical_time_s')} s"
                 cv2.putText(image,label,(16,28),cv2.FONT_HERSHEY_SIMPLEX,.55,(30,30,255),2)
                 if stream is None:

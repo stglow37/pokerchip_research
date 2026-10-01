@@ -11,9 +11,9 @@ def main(argv=None):
     commands=parser.add_subparsers(dest="command",required=True)
     p=commands.add_parser("init",help="새 연구 프로젝트");p.add_argument("folder")
     p=commands.add_parser("demo",help="합성 영상/피팅 fixture 생성");p.add_argument("folder");p.add_argument("--frames",type=int,default=90)
-    p=commands.add_parser("add",help="외부 원본 영상 등록");p.add_argument("folder");p.add_argument("videos",nargs="+");p.add_argument("--chips",nargs="+",default=["chip_1","chip_2","chip_3"])
+    p=commands.add_parser("add",help="외부 원본 등록; --chips 생략 시 개수 자동 인식");p.add_argument("folder");p.add_argument("videos",nargs="+");p.add_argument("--chips",nargs="+")
     p=commands.add_parser("analyze",help="단일 worker batch; 재실행으로 완료 캐시/중단 checkpoint 재개");p.add_argument("folder");p.add_argument("--ids",nargs="+")
-    p=commands.add_parser("auto",help="v2.5 GUI와 같은 보정·개수 인식·분석·자동 저장");p.add_argument("folder");p.add_argument("--ids",nargs="+")
+    p=commands.add_parser("auto",help="GUI와 같은 자동 구간·보정·개수·계측·파일 저장");p.add_argument("folder");p.add_argument("--ids",nargs="+")
     p=commands.add_parser("inspect",help="streaming PTS·회전 메타데이터 검사");p.add_argument("video");p.add_argument("--output",required=True)
     p=commands.add_parser("calibrate",help="ChArUco 영상 calibration");p.add_argument("video");p.add_argument("board_json");p.add_argument("output");p.add_argument("--mode",required=True)
     p=commands.add_parser("fit",help="검증된 데이터셋 단계별 피팅");p.add_argument("dataset");p.add_argument("output");p.add_argument("--bootstrap",type=int,default=0)
@@ -31,7 +31,10 @@ def main(argv=None):
             from .application.demo import make_demo
             make_demo(args.folder,args.frames)
         elif args.command=="add":
-            p=load_project(args.folder);register(args.folder,p,args.videos,args.chips)
+            p=load_project(args.folder)
+            added=register(args.folder,p,args.videos,args.chips or ['chip_1'])
+            for e in added:e.update(count_mode='manual' if args.chips else 'auto',quick_workflow=True)
+            save_project(args.folder,p)
         elif args.command=="analyze":
             from .application.jobs import Batch
             p=load_project(args.folder);batch=Batch(args.folder,p,lambda x:print(dumps(x),flush=True))

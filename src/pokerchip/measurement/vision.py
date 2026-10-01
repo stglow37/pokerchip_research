@@ -19,6 +19,20 @@ def circle_fit(points, radius_prior=None, sigma_prior=None, noise_floor=.1):
     r = np.sqrt(max(0,sol[2]+sum(sol[:2]**2)))
     initial = np.r_[sol[:2],r]
     scale = max(noise_floor, r*.006)
+    # Deterministic consensus seeds resist grid crossings and a second rim.
+    # Only invoke this when the algebraic seed does not already explain edges.
+    initial_error=abs(np.linalg.norm(p-initial[:2],axis=1)-r)
+    if np.median(initial_error)>max(noise_floor*2,r*.008):
+        rng=np.random.default_rng(731);threshold=max(noise_floor*3,r*.025)
+        best=float(np.sum(np.minimum(initial_error,threshold)**2))
+        for _ in range(64):
+            q=p[rng.choice(len(p),3,replace=False)]
+            matrix=2*(q[1:]-q[0]);rhs=np.sum(q[1:]**2,axis=1)-sum(q[0]**2)
+            if abs(np.linalg.det(matrix))<1e-10:continue
+            c=np.linalg.solve(matrix,rhs);rr=np.linalg.norm(q[0]-c)
+            if not .6*r<rr<1.5*r:continue
+            cost=float(np.sum(np.minimum(abs(np.linalg.norm(p-c,axis=1)-rr),threshold)**2))
+            if cost<best:best=cost;initial=np.r_[c,rr]
     def residual(q):
         values = np.linalg.norm(p-q[:2],axis=1)-q[2]
         if radius_prior is not None and sigma_prior is not None:
@@ -30,17 +44,31 @@ def circle_fit(points, radius_prior=None, sigma_prior=None, noise_floor=.1):
     good = abs(err)<3*mad
     if good.sum()<8 or fit.x[2]<=0:
         raise ValueError("유효 원 경계점 부족")
+    # Refit accepted edge points: excluded grid/shadow points must not keep
+    # pulling the published center. Covariance is conditional on this selection.
+    selected=p[good]
+    def clean_residual(q):
+        values=np.linalg.norm(selected-q[:2],axis=1)-q[2]
+        if radius_prior is not None and sigma_prior is not None:
+            values=np.r_[values,(q[2]-radius_prior)*scale/sigma_prior]
+        return values
+    fit=least_squares(clean_residual,fit.x,loss='soft_l1',f_scale=scale,max_nfev=80)
+    err=np.linalg.norm(p-fit.x[:2],axis=1)-fit.x[2]
     v = p[good]-fit.x[:2]
     radii = np.linalg.norm(v,axis=1)
     J = np.column_stack([-v/radii[:,None],-np.ones(len(v))])
     covariance = np.linalg.pinv(J.T@J)*max(noise_floor**2,np.sum(err[good]**2)/max(1,len(v)-3))
     angles = np.sort(np.arctan2(v[:,1],v[:,0]))
     maxgap = np.max(np.diff(np.r_[angles,angles[0]+2*np.pi]))
-    coverage = float((2*np.pi-maxgap)/(2*np.pi))
+    span=float((2*np.pi-maxgap)/(2*np.pi))
+    # Occupied angular bins measure actual support, unlike 1-largest-gap,
+    # which incorrectly labels four short, separated arcs as 75% visible.
+    bins=np.floor((angles%(2*np.pi))/(2*np.pi)*36).astype(int)%36
+    coverage=min(span,float(len(np.unique(bins))/36))
     condition = float(np.linalg.cond(J.T@J))
     return {"center": fit.x[:2], "radius": float(fit.x[2]), "residual_rms": float(np.sqrt(np.mean(err[good]**2))),
             "covariance": covariance, "visible_arc_fraction": coverage, "condition": condition,
-            "inlier_fraction": float(good.mean()), "points": p[good],
+            "angular_span_fraction":span, "occupied_angular_bins":int(len(np.unique(bins))), "inlier_fraction": float(good.mean()), "points": p[good],
             "status": "low_confidence" if coverage < .55 or condition > 300 else "partially_observed" if coverage < .85 else "observed",
             "uncertainty_kind": "conditional_linearized_edge_fit_excludes_shared_camera_bias"}
 
@@ -152,10 +180,11 @@ def measure(image, candidate, calibration, settings, blockers=(), height=None, g
     fit=circle_fit(points)
     if abs(fit["radius"]-radius)>radius*.25:
         raise ValueError("후보 대비 반경 불일치")
-    if fit['residual_rms']>max(1.5,fit['radius']*settings.get('edge_relative_limit',.04)):
+    if fit['residual_rms']>max(3.,fit['radius']*.08):
         raise ValueError('원 경계 오차가 큽니다: 그림자·격자·다른 물체 의심')
     world_points=to_world(fit["points"],calibration,height)
-    wf=circle_fit(world_points,noise_floor=1e-6) if world_points is not None else None
+    prior=settings.get('measured_radius_m');prior_sigma=settings.get('measured_radius_sigma_m')
+    wf=circle_fit(world_points,prior,prior_sigma,noise_floor=1e-6) if world_points is not None else None
     if wf is not None:
         # Resample the ORIGINAL image along projected concentric world circles.
         # This corrects the initial approximate pixel-circle sampling under perspective.
@@ -174,21 +203,43 @@ def measure(image, candidate, calibration, settings, blockers=(), height=None, g
                 left,mid,right=grad[i,j-1:j+2];denom=left-2*mid+right
                 shift=np.clip(.5*(left-right)/denom,-.5,.5) if abs(denom)>1e-10 else 0.
                 refined.append(world[i,j]+(world[i,j+1]-world[i,j])*shift)
-            if len(refined)>=12:wf=circle_fit(refined,noise_floor=1e-6)
+            if len(refined)>=12:wf=circle_fit(refined,prior,prior_sigma,noise_floor=1e-6)
         center=to_pixel([wf["center"]],calibration,height or 0)[0]
     else:
         center=fit["center"]
+    projected=None
+    if wf is not None:
+        a=np.linspace(0,2*np.pi,180,endpoint=False)
+        projected=to_pixel(wf['center']+wf['radius']*np.column_stack([np.cos(a),np.sin(a)]),calibration,height or 0)
+        final_points=to_pixel(wf['points'],calibration,height or 0)
+        # Local Jacobian transports the final world center/radius covariance.
+        def projected_state(q):
+            pc=to_pixel([q[:2]],calibration,height or 0)[0]
+            boundary=to_pixel(q[:2]+q[2]*np.column_stack([np.cos(a),np.sin(a)]),calibration,height or 0)
+            return np.r_[pc,np.median(np.linalg.norm(boundary-pc,axis=1))]
+        q=np.r_[wf['center'],wf['radius']];eps=1e-6
+        J=np.column_stack([(projected_state(q+np.eye(3)[k]*eps)-projected_state(q-np.eye(3)[k]*eps))/(2*eps) for k in range(3)])
+        fitted=projected_state(q)
+        directions=wf['points']-wf['center'];directions/=np.linalg.norm(directions,axis=1)[:,None]
+        fitted_points=to_pixel(wf['center']+wf['radius']*directions,calibration,height or 0)
+        residual_px=float(np.sqrt(np.mean(np.sum((final_points-fitted_points)**2,axis=1))))
+        fit={**fit,'center':fitted[:2],'radius':float(fitted[2]),'points':final_points,
+             'covariance':J@wf['covariance']@J.T,'visible_arc_fraction':wf['visible_arc_fraction'],'residual_rms':residual_px}
     clearance=cv2.pointPolygonTest(np.asarray(polygon,np.float32),tuple(map(float,center)),True) if polygon else None
     status=(wf or fit)['status']
+    blurred=fit['residual_rms']>max(1.5,fit['radius']*settings.get('edge_relative_limit',.04))
+    if blurred:status='low_confidence'
     if clearance is not None and clearance<fit['radius']*.9:status='low_confidence'
     return {"raw_center_px": np.asarray(center).tolist(), "radius_px": fit["radius"],
+            "projected_boundary_px":projected.tolist() if projected is not None else None,
+            "silhouette_model":"projected_world_circle" if wf else "pixel_circle",
             "world_center_m": wf["center"].tolist() if wf else None,
             "radius_m": wf["radius"] if wf else None, "edge_points_px": fit["points"].tolist(),
             "covariance_px": fit["covariance"].tolist(), "covariance_world": wf["covariance"].tolist() if wf else None,
             "edge_residual_px": fit["residual_rms"], "visible_arc_fraction": fit["visible_arc_fraction"],
             "condition": (wf or fit)["condition"], "status": status,
             "surface_status":'floor_boundary' if clearance is not None and clearance<fit['radius']*.9 else 'inside_floor' if polygon else 'not_checked',
-            "measurement_warning":'blurred_edge_review' if fit['residual_rms']>max(1.5,fit['radius']*.04) else None,
+            "measurement_warning":'blurred_edge_review' if blurred else None,
             "edge_strength": float(np.median(strengths)), "quality_score_kind": "heuristic_not_probability",
             "dark_face_contrast":contrast,"detector_profile":profile,
             "geometry_status": "calibration_unverified" if wf is None else "height_corrected" if height is not None and calibration.get("pose_R") is not None else "height_unverified",
@@ -258,7 +309,7 @@ def orientation(features, template):
     delta=template.get("delta_inner_minus_rim_rad")
     if rim and not features.get("rim_ambiguous"):
         angles.append(rim["angle"]); weights.append(1/rim["angle_sigma_rad"]**2); used.append("rim")
-    if inner and delta is not None and not features.get("inner_ambiguous"):
+    if inner and inner.get("radius_ratio",1.)>.12 and delta is not None and not features.get("inner_ambiguous"):
         angles.append(float(wrap(inner["angle"]-delta))); weights.append(1/inner["angle_sigma_rad"]**2); used.append("inner")
     if len(angles)==2 and abs(float(wrap(angles[0]-angles[1])))>max(.18,4*np.sqrt(sum(1/np.array(weights)))):
         return None,None,"relative_angle_inconsistent",[]

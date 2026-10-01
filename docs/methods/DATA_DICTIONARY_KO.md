@@ -1,3 +1,10 @@
+<!-- V5 RELEASE -->
+# v5 데이터 계약
+
+추가 필드와 자동/수동 구분은 [V5_DATA_ADDITIONS_KO.md](V5_DATA_ADDITIONS_KO.md)가 정본이다. 기존 필드와 v4.5 계약은 보존한다.
+
+---
+
 <!-- V45 RELEASE -->
 # v4.5 데이터 사전 추가
 

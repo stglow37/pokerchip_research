@@ -1,3 +1,16 @@
+<!-- V5 RELEASE -->
+# v5 먼저 읽기
+
+1. [v5 사용설명서](operations/README_V5_KO.md)
+2. [v5 요구사항·한계](development/V5_REQUIREMENTS_KO.md)
+3. [실제 검증 기록](../validation/test-records/v5/REPORT_KO.md)
+4. [v5 데이터 계약](methods/V5_DATA_ADDITIONS_KO.md)
+5. [자동 계측 결정](decisions/ADR-007-v5-observation-first.md)
+
+아래는 과거 버전 색인이다. 현재 버전이 우선한다.
+
+---
+
 <!-- V45 RELEASE -->
 # v4.5 먼저 읽을 문서
 

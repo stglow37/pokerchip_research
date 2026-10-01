@@ -1,3 +1,10 @@
+<!-- V5 RELEASE -->
+# v5 시험 진입점
+
+`python -m pytest -q`가 전체 회귀시험이다. v5 최종 Windows/Python 3.14.6 시험은 167개 통과했다. `tests/regression/test_v5.py`는 새 프레임·구간·원·추적·충돌·CLI 회귀를 포함한다. 실영상은 `validation/run_v5_real.py 경로목록.json 결과폴더`로 재현한다. 개발 결과 재개 시 `--resume`는 완료 영상의 구간을 보존하고 stage fingerprint에 따라 필요한 단계를 갱신한다. 공통 파이프라인 변경은 원 관측 캐시도 무효화할 수 있다. 결과는 [v5 기록](../../validation/test-records/v5/REPORT_KO.md)을 참고한다.
+
+---
+
 # 테스트 환경과 검증 절차
 
 ## 지원·검증 환경

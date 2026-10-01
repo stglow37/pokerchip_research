@@ -1,0 +1,11 @@
+# CPython 3.14.6 Windows x64. Actual validation versions, 2026-10-01.
+numpy==2.5.3
+scipy==1.18.1
+opencv-contrib-python==5.0.0.93
+av==18.1.0
+PySide6==6.11.2
+matplotlib==3.11.2
+openpyxl==3.1.5
+psutil==7.2.2
+pytest==9.1.1
+setuptools==84.0.0

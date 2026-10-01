@@ -35,7 +35,8 @@ def scope(experiment, chip, frame):
         a,b=experiment.get('interval',[0,None]);segments=[{'start':a,'end':b}]
     for s in segments:
         if s['start']<=frame and (s.get('end') is None or frame<=s['end']):
-            return {'observable':s.get('observable',True),'fit_enabled':s.get('fit_enabled',True),
+            stopped=any(a.get('chip_id')==chip and a.get('kind')=='stopped' and frame>a['frame'] for a in experiment.get('stop_annotations',[]))
+            return {'observable':s.get('observable',True),'fit_enabled':s.get('fit_enabled',True) and not stopped,
                     'scope_reason':s.get('reason','selected_interval'),'scope_segment':s['start']}
     return {'observable':False,'fit_enabled':False,'scope_reason':'outside_selected_interval','scope_segment':None}
 

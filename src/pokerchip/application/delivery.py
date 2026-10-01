@@ -9,8 +9,8 @@ from .. import __version__
 
 HEADERS=['영상','칩 번호','프레임','실제 시간(s)','중심 x(px)','중심 y(px)','중심 x(m)','중심 y(m)',
          '속도 x(m/s)','속도 y(m/s)','속력(m/s)','가속도 x(m/s²)','가속도 y(m/s²)',
-         '회전각(rad)','각속도(rad/s)','각가속도(rad/s²)','속도 x(px/s)','속도 y(px/s)',
-         '거리 보정 상태','시간 상태','각도 상태','측정 출처','빈 값 이유','분석 기록']
+         '연속 회전각(rad)','각속도(rad/s)','각가속도(rad/s²)','속도 x(px/s)','속도 y(px/s)',
+         '거리 보정 상태','시간 상태','각도 상태','측정 출처','빈 값 이유','분석 기록','단일 프레임 방향(rad)']
 
 
 def trajectory_rows(run):
@@ -31,9 +31,9 @@ def human_rows(run,name):
         px=r.get('raw_center_px') or [None,None];xy=r.get('world_center_m') or [None,None]
         yield [name,r['chip_id'],r['frame_index'],r.get('physical_time_s'),*px,*xy,
             r.get('vx_m_s'),r.get('vy_m_s'),r.get('speed_m_s'),r.get('ax_m_s2'),r.get('ay_m_s2'),
-            r.get('theta_unwrapped_rad') if r.get('theta_unwrapped_rad') is not None else r.get('theta_wrapped_rad'),
+            r.get('theta_unwrapped_rad'),
             r.get('omega_rad_s'),r.get('alpha_rad_s2'),r.get('vx_px_s'),r.get('vy_px_s'),
-            r.get('geometry_status'),r.get('time_status'),r.get('angle_status'),r.get('source'),r.get('reason'),run.name]
+            r.get('geometry_status'),r.get('time_status'),r.get('angle_status'),r.get('source'),r.get('reason'),run.name,r.get('theta_wrapped_rad')]
 
 def publish_results(folder,project,issues=()):
     folder=Path(folder);out=folder/'results';out.mkdir(exist_ok=True)
@@ -46,7 +46,15 @@ def publish_results(folder,project,issues=()):
                  '거리 보정':None,'실제 시간':None,'초기30프레임 관측':None,'각속도 행':None,'탐색 피팅':None,'격자 긴 방향':e.get('floor_scene',{}).get('long_direction'),
                  '결과 폴더':'','설명':e.get('failure_reason','')}
             # Never present a previous successful run as the result of a failed retry.
-            if e.get('last_run') and e.get('status')=='complete':
+            current=e.get('last_run') and e.get('status')=='complete'
+            if current:
+                from .pipeline import stage_keys
+                from ..core.config import effective
+                manifest=read_json(folder/e['last_run']/'manifest.json')
+                if stage_keys(effective(project,e),e,manifest['source_hash'])['export']!=manifest.get('stage_keys',{}).get('export'):
+                    current=False
+                    row.update({'상태':'재분석 필요','설명':'설정 또는 수정 사항이 이전 분석과 다릅니다. 과거 결과는 기존 run 폴더에 보존했습니다.'})
+            if current:
                 run=folder/e['last_run'];q=read_json(run/'export/quality.json')
                 leaf=re.sub(r'[^\w가-힣.-]+','_',Path(e['name']).stem)[:60]+'_'+e['id'][-8:]
                 dest=out/leaf/run.name;dest.mkdir(parents=True,exist_ok=True)
@@ -70,6 +78,7 @@ def publish_results(folder,project,issues=()):
                 atomic_json(dest/'provenance.json',{'source_run':str(run.relative_to(folder)),
                     'source_hash':e.get('source_hash'),'count_proposal':e.get('count_proposal'),
                     'chip_id_scope':'track number within this video; not physical identity across trials',
+                    'interval_selection':e.get('start_selection'), 'interval_proposal':e.get('interval_proposal'),
                     'rolling_shutter':'not_corrected_by_user_choice'})
             summary.append(row)
     fields=list(summary[0]) if summary else ['영상','상태']
@@ -84,7 +93,7 @@ def publish_results(folder,project,issues=()):
     book.save(out/'영상별_요약.xlsx')
     atomic_json(out/'summary.json',{'videos':summary,'issues':list(issues),'version':__version__})
     (out/'먼저_읽어주세요.txt').write_text(
-        '포커칩 v4.0 분석 결과\n\n전체_운동데이터.csv: 모든 완료 영상의 측정 데이터\n영상별_요약.xlsx: 처리 상태와 결과 위치\n'
+        f'포커칩 v{__version__} 분석 결과\n\n전체_운동데이터.csv: 모든 완료 영상의 측정 데이터\n영상별_요약.xlsx: 처리 상태와 결과 위치\n'
         'physics_preview.json과 Farkas_preview 그림: 직접 관측의 탐색 피팅. 공식 확정 계수나 독립 예측 검증이 아닙니다.\n'
         'review_intervals.csv: 원인별로 묶은 확인 구간. 흐림·바닥 경계를 먼저 확인하세요.\n'
         '각 영상 폴더: 운동데이터.csv, trajectories.png, 확인할_프레임.csv, 칩개수_확인.jpg(자동 인식 시)\n\n'

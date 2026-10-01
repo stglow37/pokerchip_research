@@ -9,44 +9,20 @@ from PySide6.QtWidgets import QWidget, QDialog, QVBoxLayout, QHBoxLayout, QLabel
 from ..measurement.video import frames, metadata
 
 
-class ExactFrameReader:
-    def __init__(self, max_bytes=96*1024*1024):
-        self.path=None; self.cache=OrderedDict(); self.bytes=0; self.limit=max_bytes
-        self.iterator=None; self.last=-1
+from ..measurement.frame_access import IndexedFrameReader, Superseded
 
-    def get(self, path, index):
-        path=str(Path(path).resolve())
-        if path != self.path:
-            self.close(); self.path=path
-        if index in self.cache:
-            self.cache.move_to_end(index)
-            t,img=self.cache[index]; return dict(t),img.copy()
-        if self.iterator is None or index <= self.last:
-            if self.iterator is not None: self.iterator.close()
-            self.iterator=frames(path);self.last=-1
-        for timing,img in self.iterator:
-            f=timing['frame_index'];self.last=f
-            if f >= max(0,index-8):
-                if f in self.cache:self.bytes-=self.cache.pop(f)[1].nbytes
-                self.cache[f]=(timing,img);self.bytes+=img.nbytes
-                while self.bytes>self.limit and len(self.cache)>1:
-                    _,(_,old)=self.cache.popitem(last=False);self.bytes-=old.nbytes
-            if f==index:return dict(timing),img.copy()
-        raise IndexError('요청한 프레임이 영상에 없습니다.')
-
-    def close(self):
-        if self.iterator is not None:self.iterator.close()
-        self.iterator=None;self.cache.clear();self.bytes=0;self.last=-1
+class ExactFrameReader(IndexedFrameReader):
+    pass
 
 
 class FrameLoader(QObject):
     ready=Signal(object)
     failed=Signal(object)
     def __init__(self, parent=None):
-        super().__init__(parent);self.condition=threading.Condition();self.request=None;self.stopped=False
+        super().__init__(parent);self.condition=threading.Condition();self.request=None;self.stopped=False;self.generation=0
         self.worker=threading.Thread(target=self._work,daemon=True);self.worker.start()
     def submit(self, token, path, index):
-        with self.condition:self.request=(token,path,index);self.condition.notify()
+        with self.condition:self.generation+=1;self.request=(token,path,index,self.generation);self.condition.notify()
     def stop(self):
         with self.condition:self.stopped=True;self.condition.notify()
     def _work(self):
@@ -56,12 +32,15 @@ class FrameLoader(QObject):
                 with self.condition:
                     while self.request is None and not self.stopped:self.condition.wait()
                     if self.stopped:return
-                    token,path,index=self.request;self.request=None
+                    token,path,index,generation=self.request;self.request=None
                 try:
-                    timing,image=reader.get(path,index)
-                    if not self.stopped:self.ready.emit((token,timing,image))
+                    timing,image=reader.get(path,index,cancelled=lambda:self.stopped or generation!=self.generation)
+                    if reader.index is not None:timing={**timing,"decoded_count":reader.index["decoded_count"]}
+                    if not self.stopped and generation==self.generation:self.ready.emit((token,timing,image))
+                except Superseded:
+                    continue
                 except Exception as exc:
-                    if not self.stopped:self.failed.emit((token,str(exc)))
+                    if not self.stopped and generation==self.generation:self.failed.emit((token,str(exc)))
         finally:reader.close()
 
 
@@ -125,9 +104,9 @@ class StartFrameDialog(QDialog):
     """Nothing is confirmed until a displayed frame is explicitly accepted."""
     def __init__(self,path,experiment,parent=None):
         super().__init__(parent);self.path=path;self.setWindowTitle('분석 시작 프레임 선택 · '+experiment['name']);self.resize(1050,850)
-        self.token=0;self.loaded=-1;self.frame=0;self.selected_frame=None;self.selected_end=None
+        self.token=0;self.loaded=-1;self.frame=0;self.selected_frame=None;self.selected_end=None;self.pinned_start=None
         self.total=metadata(path).get('estimated_frames') or 1
-        v=QVBoxLayout(self);intro=QLabel('① 손·고무줄에서 벗어난 뒤 원판과 표식이 보이는 장면으로 이동하세요.\n② 그 프레임을 확인하고 아래 「이 프레임부터 분석」을 누르세요.');v.addWidget(intro)
+        v=QVBoxLayout(self);intro=QLabel('시작과 끝은 어떤 순서로 지정해도 됩니다.\n시작 장면 확인 → 시작 고정 → 끝 장면 지정 → 구간 적용');v.addWidget(intro)
         self.view=ImageView();self.view.point_mode=False;v.addWidget(self.view,1)
         self.slider=QSlider(Qt.Orientation.Horizontal);self.slider.setRange(0,self.total-1);v.addWidget(self.slider)
         bar=QHBoxLayout();v.addLayout(bar)
@@ -144,11 +123,14 @@ class StartFrameDialog(QDialog):
         endrow=QHBoxLayout();v.addLayout(endrow);self.end_spin=QSpinBox();self.end_spin.setRange(0,self.total-1);self.end_spin.setPrefix('끝 프레임 ');endrow.addWidget(self.end_spin)
         old_end=experiment.get('interval',[0,None])[1];self.end_spin.setValue(old_end if old_end is not None else self.total-1);self.end_check.setChecked(old_end is not None)
         use_end=QPushButton('현재 장면을 종료로 지정');endrow.addWidget(use_end)
-        use_end.clicked.connect(lambda:(self.end_check.setChecked(True),self.end_spin.setValue(self.frame)))
+        use_end.clicked.connect(self.pin_end)
+        self.pin_start_button=QPushButton('현재 장면을 시작으로 고정');endrow.addWidget(self.pin_start_button)
+        self.pin_start_button.clicked.connect(self.pin_start)
+        self.range_label=QLabel('시작: 아직 고정하지 않음');v.addWidget(self.range_label)
         self.end_check.toggled.connect(self.update_accept);self.end_spin.valueChanged.connect(self.update_accept)
         self.check=QCheckBox('선택 장면에서 손·고무줄과의 접촉이 끝났음을 확인했습니다.');v.addWidget(self.check)
         actions=QHBoxLayout();v.addLayout(actions);cancel=QPushButton('나중에 선택');cancel.clicked.connect(self.reject);actions.addWidget(cancel)
-        self.accept_button=QPushButton('이 프레임부터 분석');self.accept_button.setObjectName('primary');self.accept_button.setEnabled(False)
+        self.accept_button=QPushButton('선택한 구간 적용');self.accept_button.setObjectName('primary');self.accept_button.setEnabled(False)
         self.accept_button.clicked.connect(self.commit);actions.addWidget(self.accept_button)
         self.timer=QTimer(self);self.timer.setInterval(100);self.timer.timeout.connect(self.advance)
         self.loader=FrameLoader(self);self.loader.ready.connect(self.ready);self.loader.failed.connect(self.failure)
@@ -173,17 +155,31 @@ class StartFrameDialog(QDialog):
         else:super().reject()
 
     def request_frame(self,f):
-        self.frame=f;self.token+=1;self.check.setChecked(False);self.accept_button.setEnabled(False)
+        self.frame=f;self.token+=1;self.check.setChecked(False) if self.pinned_start is None else None;self.accept_button.setEnabled(False)
         self.spin.blockSignals(True);self.spin.setValue(f);self.spin.blockSignals(False)
-        self.label.setText(f'프레임 {f} / {self.total-1} 불러오는 중…')
+        self.label.setText(f'프레임 {f} / {self.total-1} 불러오는 중… 처음 이동할 때는 정확한 프레임 색인을 준비합니다.')
         self.loader.submit(self.token,self.path,f)
     def ready(self,value):
         token,timing,img=value
         if token!=self.token:return
+        if timing.get('decoded_count') and timing['decoded_count']!=self.total:
+            self.total=timing['decoded_count']
+            for widget in (self.slider,self.spin,self.end_spin):widget.blockSignals(True);widget.setMaximum(self.total-1);widget.blockSignals(False)
         self.loaded=timing['frame_index'];self.view.set_image(img)
         p=timing.get('presentation_time_s');self.label.setText(f'프레임 {self.loaded} / {self.total-1} · 파일 재생시간 {p:.4f}초' if p is not None else f'프레임 {self.loaded}')
         self.update_accept()
-    def update_accept(self,*args):self.accept_button.setEnabled(self.loaded==self.frame and self.check.isChecked() and (not self.end_check.isChecked() or self.end_spin.value()>=self.frame))
+    def pin_start(self):
+        if self.loaded!=self.frame:return
+        self.pinned_start=self.frame;self.check.setChecked(True);self.update_accept()
+    def pin_end(self):
+        if self.loaded!=self.frame:return
+        self.end_check.setChecked(True);self.end_spin.setValue(self.frame);self.update_accept()
+    def update_accept(self,*args):
+        start=self.pinned_start if self.pinned_start is not None else self.frame
+        self.accept_button.setEnabled(self.loaded==self.frame and self.check.isChecked() and
+            (not self.end_check.isChecked() or self.end_spin.value()>start))
+        if hasattr(self,'range_label'):
+            self.range_label.setText(f"시작 {start} {'(고정됨)' if self.pinned_start is not None else '(현재 장면)'} → 끝 {self.end_spin.value() if self.end_check.isChecked() else '영상 끝'}")
     def failure(self,value):
         token,message=value
         if token!=self.token:return
@@ -197,4 +193,4 @@ class StartFrameDialog(QDialog):
         self.slider.setValue(self.frame+1)
     def commit(self):
         if self.accept_button.isEnabled():
-            self.selected_frame=self.frame;self.selected_end=self.end_spin.value() if self.end_check.isChecked() else None;self.accept()
+            self.selected_frame=self.pinned_start if self.pinned_start is not None else self.frame;self.selected_end=self.end_spin.value() if self.end_check.isChecked() else None;self.accept()

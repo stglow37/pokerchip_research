@@ -23,6 +23,10 @@ def split(project):
     return train,test
 
 
+def impact_included(e,event):
+    return bool(e.get('impacts_reviewed') or event.get('fit_eligible') or event.get('automatic_fit_gate',{}).get('eligible'))
+
+
 def load_video(folder,project,e):
     if e.get('status')!='complete' or not e.get('last_run'):raise ValueError(e['name']+': 먼저 영상 분석을 완료하세요.')
     run=Path(folder)/e['last_run'];measurement_cfg=read_json(run/'effective_settings.json');m=read_json(run/'manifest.json')
@@ -39,7 +43,9 @@ def load_video(folder,project,e):
     provenance=dict(experiment_id=e['id'],name=e['name'],run=e['last_run'],source_hash=m['source_hash'],analysis_hash=m['stage_keys']['analysis'],
         measurement_settings_hash=m.get('settings_hash'),physics_settings_hash=digest({'chips':cfg['chips'],'physics':cfg['physics']}),
         physical_settings_source='current_project_snapshot',session_id=e.get('session_id'),
-        time_status=cfg['time_profile']['status'],geometry_status=cfg['calibration']['status'])
+        time_status=cfg['time_profile']['status'],geometry_status=cfg['calibration']['status'],
+        release_selection=e.get('start_selection'),parent_source_id=e.get('parent_source_id'),
+        physical_properties=[{k:c.get(k) for k in ('id','mass_kg','radius_m','inertia_model','inertia_kg_m2')} for c in cfg['chips']])
     return cfg,rows,events,provenance
 
 
@@ -72,7 +78,8 @@ def free_trials(cfg,e,rows,events,training):
             begin=prefix-1;body=Body.from_chip(next(c for c in cfg['chips'] if c['id']==key))
             trials.append(dict(id=e['id']+'_'+key+'_f'+str(seg[0]['frame_index']),chip_id=key,session_id=e['session_id'],body=asdict(body),source='direct_observations',
                 time_status=cfg['time_profile']['status'],geometry_status=cfg['calibration']['status'],
-                times=ts[begin:].tolist(),position_angle=obs[begin:].tolist(),initial_guess=state,sigma=[.0005,.0005,.035],
+                times=ts[begin:].tolist(),position_angle=obs[begin:].tolist(),initial_guess=state,sigma=[[max(.0001,float(np.sqrt(max(0,(r.get('covariance_world') or np.eye(3)*2.5e-7)[j][j])))) for j in (0,1)]+[max(.01,r.get('theta_sigma_rad') or .035)] for r in seg[begin:]],
+                uncertainty_scope='conditional_edge_and_marker_sigma_with_floor_shared_bias_excluded',
                 initialization_times=ts[:prefix].tolist(),initialization_position_angle=obs[:prefix].tolist(),
                 frames=[r['frame_index'] for r in seg[begin:]],initialization_frames=[r['frame_index'] for r in seg[:prefix]],score_from_index=1))
     return trials
@@ -100,7 +107,7 @@ def normal_trials(e,events):
         base={'event':ev.get('id'),'coefficient':'e_normal'}
         if ev.get('status')=='excluded' or not ev.get('fit_scope_allowed',True) or ev.get('kind')!='isolated_binary' or not ev.get('pre') or not ev.get('post'):
             skipped.append({**base,'reason':'검토된 고립 2체 충돌의 위치 전후 상태 부족'});continue
-        if not (e.get('impacts_reviewed') or ev.get('fit_eligible')):
+        if not impact_included(e,ev):
             skipped.append({**base,'reason':'충돌 영상 검토 확인 필요'});continue
         try:
             n=np.asarray(ev['normal'],float);pre=ev['pre'];post=ev['post']
@@ -110,13 +117,17 @@ def normal_trials(e,events):
             b=float((np.asarray(post[0]['velocity'])-post[1]['velocity'])@n)
             sigmas=[np.asarray(s.get('velocity_sigma') or [.03,.03],float) for side in (pre,post) for s in side]
             sigma=float(max(.003,np.sqrt(sum(float((x*n)@(x*n)) for x in sigmas))))
+            sigma_pre=float(max(.003,np.sqrt(sum(float((x*n)@(x*n)) for x in sigmas[:2]))))
+            sigma_post=float(max(.003,np.sqrt(sum(float((x*n)@(x*n)) for x in sigmas[2:]))))
         except (KeyError,TypeError,ValueError,IndexError):
             skipped.append({**base,'reason':'법선 또는 충돌 전후 중심 속도 자료 오류'});continue
         if not np.isfinite([a,b,sigma]).all() or a<=max(1e-5,3*sigma) or b>3*sigma:
             skipped.append({**base,'reason':'접근 속도가 측정 오차보다 충분히 크고 충돌 후 분리해야 합니다'});continue
         result.append({'id':e['id']+'_'+ev['id'],'event_id':ev['id'],'session_id':e.get('session_id'),
                        'a_m_s':a,'b_m_s':b,'sigma_m_s':sigma,
-                       'scope':'position_based_one_sided_observed_states','rotation_required':False})
+                       'a_sigma_m_s':sigma_pre,'b_sigma_m_s':sigma_post,
+                       'scope':'position_based_one_sided_observed_states','rotation_required':False,
+                       'review_scope':'human_reviewed' if e.get('impacts_reviewed') or ev.get('fit_eligible') else 'automatic_exploratory'})
     return result,skipped
 
 
@@ -125,14 +136,15 @@ def impact_trials(cfg,e,events):
     for ev in events:
         if ev.get('status')=='excluded' or not ev.get('fit_scope_allowed',True) or ev.get('kind')!='isolated_binary' or not ev.get('pre') or not ev.get('post'):
             skipped.append({'event':ev['id'],'coefficient':'ifr','reason':'고립 2체 충돌의 연속 전후 측정 부족'});continue
-        if not (e.get('impacts_reviewed') or ev.get('fit_eligible')):
+        if not impact_included(e,ev):
             skipped.append({'event':ev['id'],'coefficient':'ifr','reason':'충돌 영상 검토 확인 필요'});continue
         if any(s.get('omega') is None for side in ('pre','post') for s in ev[side]):
             skipped.append({'event':ev['id'],'coefficient':'ifr','reason':'충돌 전후 각속도 누락'});continue
         states={side:[s['position']+s['velocity']+[s.get('theta') or 0.,s['omega']] for s in ev[side]] for side in ('pre','post')}
         sig={side+'_sigma':[list(np.maximum(.01,s['velocity_sigma']))+[max(1.,s.get('omega_sigma') or 1.)] for s in ev[side]] for side in ('pre','post')}
         bodies=[asdict(Body.from_chip(next(c for c in cfg['chips'] if c['id']==k))) for k in ev['pair']]
-        result.append(dict(id=e['id']+'_'+ev['id'],session_id=e['session_id'],source='reviewed_observations',state_estimation=ev.get('velocity_scope','measurement'),reconstruction=ev.get('reconstruction'),kind='isolated_binary',approved=True,
+        reviewed=bool(e.get('impacts_reviewed') or ev.get('fit_eligible'))
+        result.append(dict(id=e['id']+'_'+ev['id'],session_id=e['session_id'],source='reviewed_observations' if reviewed else 'direct_observations',review_scope='human_reviewed' if reviewed else 'automatic_exploratory',state_estimation=ev.get('velocity_scope','measurement'),reconstruction=ev.get('reconstruction'),kind='isolated_binary',approved=True,
             time_status=cfg['time_profile']['status'],geometry_status=cfg['calibration']['status'],bodies=bodies,normal=ev['normal'],normal_sigma=.03,**states,**sig))
     return result,skipped
 
@@ -158,31 +170,40 @@ def _train_constants(folder,project,progress=None):
         parameters={},stages={},training_sources=sources,skipped_impacts=skipped,
         model=project['physics']['model'],model_version='farkas_v1_ifr_reconstruction_v2',
         model_scope='Farkas free-motion model; position-based normal restitution; rotation-dependent tangential IFR extension',
-        uncertainty='No calibrated CI; provisional time/geometry and fixed exploratory weights.',
+        uncertainty='Conditional measurement weights; shared camera/time uncertainty not calibrated.',
         split_unit='whole_video',data=dict(free_trials=free,normal_trials=normal,impact_trials=collisions))
     if free:
+        checkpoint('1/4 바닥 마찰 공통 피팅',overall_percent=10,phase_end_percent=48)
         emit({'stage':'study','message':'1/4 바닥 마찰 공통 피팅 · 반복 최적화 중'})
         fit=fit_free(free,starts=(.15,.35),max_nfev=100,exploratory=True);bank['stages']['free_motion']=fit
         if fit['optimizer_success'] and fit['diagnostics']['identifiability']=='identified_locally' and not fit['diagnostics']['active_bounds'][0]:bank['parameters'].update(fit['parameters'])
+    checkpoint('2/4 법선 반발계수',overall_percent=50,phase_end_percent=60)
     emit({'stage':'study','message':'2/4 위치 기반 법선 반발계수 검사 중'})
     if normal:
         a=np.array([tr['a_m_s'] for tr in normal]);b=np.array([tr['b_m_s'] for tr in normal]);sigma=np.array([tr['sigma_m_s'] for tr in normal])
-        nf=least_squares(lambda x:(b+x[0]*a)/sigma,[.7],bounds=([0.],[1.]),loss='soft_l1')
+        sa=np.array([tr['a_sigma_m_s'] for tr in normal]);sb=np.array([tr['b_sigma_m_s'] for tr in normal])
+        nf=least_squares(lambda x:np.r_[(b+x[0]*x[1:])/sb,(x[1:]-a)/sa],np.r_[.7,a],
+            bounds=(np.r_[0.,np.zeros(len(a))],np.r_[1.,np.full(len(a),np.inf)]),loss='soft_l1')
+        from ..analysis.validation import diagnostics
+        normal_diag=diagnostics(nf,['e_normal']+[f'approach_{i}' for i in range(len(a))])
         bank['stages']['normal']={'event_count':len(normal),'optimizer_success':bool(nf.success),
             'scope':'position_based_one_sided_observed_states_rotation_not_required','trial_ids':[tr['id'] for tr in normal],
-            'active_bound':bool(np.any(nf.active_mask)),'weight_source':'propagated_velocity_sigma_with_floor'}
+            'active_bound':bool(np.any(nf.active_mask)),'weight_source':'separate_pre_post_velocity_sigma_with_floor',
+            'errors_in_variables':True,'diagnostics':normal_diag,
+            'uncertainty_scope':'conditional_on_measured_normal_time_scale; not an independent accuracy claim'}
         if nf.success and not np.any(nf.active_mask):bank['parameters']['e_normal']=float(nf.x[0])
         else:bank['stages']['normal']['release_status']='법선 반발 최적화 실패 또는 경계해: 적용 보류'
     else:
         bank['stages']['normal']={'event_count':0,'release_status':'검토된 위치 기반 법선 충돌 자료 없음'}
     from .contact_states import reconstruct
+    checkpoint('3/4 충돌 상태 환산',overall_percent=62,phase_end_percent=78)
     emit({'stage':'study','message':'3/4 IFR용 회전 포함 상태를 같은 충돌 시각으로 환산 중'})
     for cfg,e,rows,events in loaded:
         corrected=[]
         for ev in events:
             if ev.get('kind')!='isolated_binary' or ev.get('status')=='excluded':
                 skipped.append(dict(video=e['name'],event=ev.get('id'),coefficient='ifr',reason='검토된 고립 2체 충돌 아님'));continue
-            if not (e.get('impacts_reviewed') or ev.get('fit_eligible')):
+            if not impact_included(e,ev):
                 skipped.append(dict(video=e['name'],event=ev.get('id'),coefficient='ifr',reason='충돌 영상 검토 확인 필요'));continue
             try:
                 if cfg['time_profile']['status']=='synthetic_known_clock':updated=ev
@@ -194,6 +215,7 @@ def _train_constants(folder,project,progress=None):
         tr,why=impact_trials(cfg,e,corrected);collisions.extend(tr)
         skipped.extend([dict(video=e['name'],**x) for x in why])
     bank['data']['impact_trials']=collisions
+    checkpoint('4/4 접선 IFR 피팅',overall_percent=80,phase_end_percent=96)
     emit({'stage':'study','message':'4/4 회전 포함 IFR 식별성 검사 중'})
     if collisions:
         if len(collisions)>=3 and 'e_normal' in bank['parameters']:
@@ -238,6 +260,11 @@ def _evaluate_fixed(folder,project,bank_path,progress=None):
         try:cfg,rows,events,prov=load_video(folder,project,e)
         except (ValueError,FileNotFoundError) as exc:
             result['skipped'].append(dict(video=e['name'],reason=str(exc)));continue
+        if prov.get('parent_source_id') and prov['parent_source_id'] in {s.get('parent_source_id') for s in bank['training_sources']}:raise ValueError('같은 원본에서 잘라낸 영상은 독립 검증이 아닙니다.')
+        if prov.get('session_id') in {s.get('session_id') for s in bank['training_sources']}:
+            result['skipped'].append({'video':e['name'],'warning':'학습과 같은 촬영 세션: 영상 분리 검증이며 독립 세션 검증은 아님'})
+        material=next((s.get('physical_properties') for s in bank['training_sources'] if s.get('physical_properties')),None)
+        if material and material!=prov.get('physical_properties'):raise ValueError('계수 측정 때의 질량·반지름·관성 설정과 다릅니다. 계수를 다시 구하거나 동일 물성을 사용하세요.')
         if prov['source_hash'] in trained:raise ValueError('파일명이 달라도 원본이 같은 영상은 검증에 사용할 수 없습니다.')
         result['sources'].append(prov)
         if 'mu_bottom' in params:
@@ -270,7 +297,7 @@ def _evaluate_fixed(folder,project,bank_path,progress=None):
         corrected=[]
         from .contact_states import reconstruct
         for ev in events:
-            if ev.get('kind')!='isolated_binary' or ev.get('status')=='excluded' or not (e.get('impacts_reviewed') or ev.get('fit_eligible')):continue
+            if ev.get('kind')!='isolated_binary' or ev.get('status')=='excluded' or not impact_included(e,ev):continue
             try:
                 if cfg['time_profile']['status']=='synthetic_known_clock':corrected.append(ev)
                 elif 'mu_bottom' in params:corrected.append(reconstruct(ev,rows,cfg,params['mu_bottom']))

@@ -10,6 +10,9 @@ def painted_markers(image,observation,participating,calibration,height=None,chip
     lo=np.maximum(0,np.floor(center-r*1.2)).astype(int);hi=np.minimum(image.shape[1::-1],np.ceil(center+r*1.2)).astype(int)
     hsv=cv2.cvtColor(image[lo[1]:hi[1],lo[0]:hi[0]],cv2.COLOR_BGR2HSV)
     yy,xx=np.mgrid[lo[1]:hi[1],lo[0]:hi[0]];rad=np.hypot(xx-center[0],yy-center[1])/r
+    if observation.get('world_center_m') is not None and observation.get('radius_m'):
+        wp=to_world(np.column_stack([xx.ravel(),yy.ravel()]),calibration,height)
+        if wp is not None:rad=(np.linalg.norm(wp-np.asarray(observation['world_center_m']),axis=1)/observation['radius_m']).reshape(xx.shape)
     result={}
     definitions={c['id']:c for c in chips or []}
     templates=templates or {}
@@ -25,7 +28,7 @@ def painted_markers(image,observation,participating,calibration,height=None,chip
         entry={}
         for role,color,limits in [('rim',colors[0],(.68,1.12)),('inner',colors[1],(0.,.65))]:
             hue={'red':0.,'blue':115.,'yellow':28.,'green':60.}[color]
-            model=dict(hue=hue,hue_tolerance=16.,min_saturation=125.,min_value=95. if color=='blue' else 65.)
+            model=dict(hue=hue,hue_tolerance=16.,min_saturation=100.,min_value=float(np.clip(np.median(hsv[:,:,2][rad<.6])+25,45,110)))
             model.update(templates.get(key,{}).get('colors',{}).get(role,{}) or {})
             mask=color_mask(hsv,color,model)*((rad>=limits[0])&(rad<limits[1])).astype('uint8')
             n,labels,stats,cent=cv2.connectedComponentsWithStats(mask);blobs=[]
@@ -34,8 +37,14 @@ def painted_markers(image,observation,participating,calibration,height=None,chip
                 if not max(5,r*r*.002)<area<r*r*.4:continue
                 point=cent[k]+lo;delta=(point-center)*[1,-1];wp=to_world([center,point],calibration,height)
                 if wp is not None:delta=wp[1]-wp[0]
-                blobs.append(dict(point_px=point.tolist(),area_px=area,radius_ratio=float(np.linalg.norm(point-center)/r),
-                    angle=float(np.arctan2(delta[1],delta[0])),angle_sigma_rad=float(max(.01,.7/max(1,np.linalg.norm(point-center))))))
+                wcov=observation.get('covariance_world');pcov=observation.get('covariance_px')
+                covariance=np.asarray(wcov if wp is not None and wcov is not None else pcov if pcov is not None else np.eye(3)*.49)[:2,:2]
+                lever=max(np.linalg.norm(delta),1e-9);normal=np.array([-delta[1],delta[0]])/lever
+                point_floor=(.0002 if wp is not None else .7)**2
+                angle_sigma=float(max(.01,np.sqrt(max(0,float(normal@covariance@normal))+point_floor)/lever))
+                ratio=float(np.linalg.norm(delta)/(observation['radius_m'] if wp is not None and observation.get('radius_m') else r))
+                blobs.append(dict(point_px=point.tolist(),area_px=area,radius_ratio=ratio,
+                    angle=float(np.arctan2(delta[1],delta[0])),angle_sigma_rad=angle_sigma))
             blobs.sort(key=lambda b:-b['area_px']);entry[role]=blobs[0] if blobs else None
             entry[role+'_ambiguous']=len(blobs)>1 and blobs[1]['area_px']>.5*blobs[0]['area_px']
         result[key]=entry
