@@ -1,0 +1,11 @@
+{
+  "version": "4.0.0",
+  "archive": "PokerChip_Astra_v4.zip",
+  "sha256": "e8743e150e651fccc0864e77f4c373b6134baa5a79bdec286d52e654bcac88d5",
+  "original_path": "PokerChip_Astra_v4.zip",
+  "archive_item_count": 1317,
+  "frozen_code_hash": "c17cbff7fa7ce9efb96820daec30441e24b4bc18b82c7f190a39f937becc2ecb",
+  "frozen_original_report_sha256": "6fcc9b4966c578d5b304144a9eb042ee748aebc7dbd39c0599ca9797f42d3e04",
+  "archived_at": "2026-09-29",
+  "note": "Original v4.0.0 distribution, including complete per-video validation outputs, retained without modification."
+}

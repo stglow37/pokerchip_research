@@ -1,0 +1,19 @@
+{
+  "radius_px": [
+    20,
+    110
+  ],
+  "roi_px": null,
+  "max_candidates": 12,
+  "max_gap_frames": 12,
+  "assignment_gate_px": 90.0,
+  "redetect_every": 5,
+  "edge_rays": 144,
+  "window_s": 0.08,
+  "min_samples": 5,
+  "max_window_samples": 161,
+  "omega_bound_rad_s": null,
+  "chunk_frames": 32,
+  "max_frame_bytes": 67108864,
+  "max_buffer_bytes": 167772160
+}

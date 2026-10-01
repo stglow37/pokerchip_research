@@ -1,0 +1,15 @@
+{
+  "pixel_points": [],
+  "world_points": [],
+  "holdout": {
+    "pixel_points": [],
+    "world_points": []
+  },
+  "independent_lengths": [
+    {
+      "pixels": [],
+      "known_m": null
+    }
+  ],
+  "evidence": ""
+}

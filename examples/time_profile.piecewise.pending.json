@@ -1,0 +1,22 @@
+{
+  "id": "time_piecewise_example",
+  "status": "pending",
+  "evidence": "",
+  "segments": [
+    {
+      "p_start": 0,
+      "p_end": 1,
+      "t_start": 0,
+      "slow_factor": 1
+    },
+    {
+      "p_start": 1,
+      "p_end": null,
+      "t_start": 1,
+      "slow_factor": 8
+    }
+  ],
+  "frame_types": {},
+  "exposure_s": null,
+  "exposure_reference": "unknown"
+}

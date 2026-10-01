@@ -1,0 +1,287 @@
+{
+  "sqlite_version": "3.53.1",
+  "scope": "stdlib SQLite only; no PokerChip imports; separate databases per worker",
+  "cases": [
+    {
+      "location": "workspace",
+      "iteration": 0,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 0,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 1,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 1,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 2,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 2,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 3,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 3,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 4,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 4,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 5,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 5,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 6,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 6,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 7,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 7,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 8,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 8,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 9,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 9,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 10,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 10,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 11,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 11,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 12,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 12,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 13,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 13,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 14,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 14,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 15,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 15,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 16,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 16,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 17,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 17,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 18,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 18,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "workspace",
+      "iteration": 19,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    },
+    {
+      "location": "temporary",
+      "iteration": 19,
+      "raw_ok": true,
+      "run_ok": true,
+      "cache_ok": true
+    }
+  ],
+  "temporary_root": "/tmp/pokerchip_sqlite_probe_se7j3su_"
+}

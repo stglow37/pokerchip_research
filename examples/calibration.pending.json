@@ -1,0 +1,12 @@
+{
+  "id": "geometry_pending",
+  "status": "pending",
+  "H": null,
+  "K": null,
+  "distortion": null,
+  "pose_R": null,
+  "pose_t": null,
+  "capture_mode": "pending",
+  "image_size": null,
+  "valid_polygon_px": null
+}

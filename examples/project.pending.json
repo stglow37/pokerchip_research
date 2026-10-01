@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0",
+  "id": "project_pending_example",
+  "name": "실험 입력 예제 - 실측 대기",
+  "session_id": "session_1",
+  "mode": "experiment",
+  "seed": 20260927,
+  "chips": [
+    {
+      "id": "chip_1",
+      "rim_color": "red",
+      "inner_color": "blue",
+      "radius_m": 0.02,
+      "radius_status": "nominal_pending",
+      "radius_sigma_m": null,
+      "mass_kg": null,
+      "thickness_m": null,
+      "inertia_kg_m2": null,
+      "inertia_model": "pending",
+      "inner_diameter_m": 0.003,
+      "contact_model": "uniform_pressure_full_disk_assumed"
+    },
+    {
+      "id": "chip_2",
+      "rim_color": "blue",
+      "inner_color": "yellow",
+      "radius_m": 0.02,
+      "radius_status": "nominal_pending",
+      "radius_sigma_m": null,
+      "mass_kg": null,
+      "thickness_m": null,
+      "inertia_kg_m2": null,
+      "inertia_model": "pending",
+      "inner_diameter_m": 0.003,
+      "contact_model": "uniform_pressure_full_disk_assumed"
+    },
+    {
+      "id": "chip_3",
+      "rim_color": "green",
+      "inner_color": "red",
+      "radius_m": 0.02,
+      "radius_status": "nominal_pending",
+      "radius_sigma_m": null,
+      "mass_kg": null,
+      "thickness_m": null,
+      "inertia_kg_m2": null,
+      "inertia_model": "pending",
+      "inner_diameter_m": 0.003,
+      "contact_model": "uniform_pressure_full_disk_assumed"
+    }
+  ],
+  "time_profile": {
+    "id": "time_pending",
+    "status": "pending",
+    "evidence": "",
+    "segments": [
+      {
+        "p_start": 0.0,
+        "p_end": null,
+        "t_start": 0.0,
+        "slow_factor": 1.0
+      }
+    ],
+    "frame_types": {},
+    "exposure_s": null,
+    "exposure_reference": "unknown"
+  },
+  "calibration": {
+    "id": "geometry_pending",
+    "status": "pending",
+    "H": null,
+    "K": null,
+    "distortion": null,
+    "pose_R": null,
+    "pose_t": null,
+    "capture_mode": "pending",
+    "image_size": null,
+    "valid_polygon_px": null
+  },
+  "templates": {},
+  "experiments": [],
+  "corrections": [],
+  "correction_cursor": 0,
+  "analysis": {
+    "radius_px": [
+      20,
+      110
+    ],
+    "roi_px": null,
+    "max_candidates": 12,
+    "max_gap_frames": 12,
+    "assignment_gate_px": 90.0,
+    "redetect_every": 5,
+    "edge_rays": 144,
+    "window_s": 0.08,
+    "min_samples": 5,
+    "max_window_samples": 161,
+    "omega_bound_rad_s": null,
+    "chunk_frames": 32,
+    "max_frame_bytes": 67108864,
+    "max_buffer_bytes": 167772160
+  },
+  "physics": {
+    "mu_bottom": null,
+    "e_normal": null,
+    "e_tangential": null,
+    "mu_collision": null,
+    "model": "contact_consistent_reconstruction"
+  },
+  "plot": {
+    "color": "#2166ac"
+  },
+  "fit_split": {
+    "train": [],
+    "holdout": [],
+    "unit": "session"
+  }
+}

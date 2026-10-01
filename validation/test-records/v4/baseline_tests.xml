@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="92" time="32.898" timestamp="2026-09-28T10:14:22.528859-05:00" hostname="6329db89eb98"><testcase classname="tests.test_cache_metadata" name="test_launch_exclusions_and_conditions_invalidate_correct_stage" time="0.024" /><testcase classname="tests.test_events" name="test_one_sided_contact_and_uncertainty" time="0.032" /><testcase classname="tests.test_events" name="test_ifr_branch_continuity_and_paper_scope[contact_consistent_reconstruction-3]" time="0.002" /><testcase classname="tests.test_events" name="test_ifr_branch_continuity_and_paper_scope[percussion_paper_scope-2]" time="0.002" /><testcase classname="tests.test_gui" name="test_gui_real_widgets_workflow" time="2.385"><failure message="AssertionError: assert 'failed' == 'complete'&#10;  &#10;  - complete&#10;  + failed">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1/test_gui_real_widgets_workflow0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f80034d8980&gt;
+
+    def test_gui_real_widgets_workflow(tmp_path,monkeypatch):
+        app=QApplication.instance() or QApplication([])
+        folder=tmp_path/"GUI 한글 데모";folder.mkdir()
+        monkeypatch.setattr(QFileDialog,"getExistingDirectory",lambda *a,**k:str(folder))
+        w=MainWindow();errors=[];w.error=errors.append;w.show();app.processEvents()
+        def click(text):
+            button=next(b for b in w.findChildren(QPushButton) if b.text()==text)
+            QTest.mouseClick(button,Qt.MouseButton.LeftButton);app.processEvents()
+        click("합성 데모 만들기");wait(app,lambda:w.project is not None and not w.busy)
+        assert w.queue_table.rowCount()==1
+        click("모두 분석 / 재개");wait(app,lambda:w.batch is not None and w.batch.thread is not None and not w.batch.thread.is_alive(),80)
+        app.processEvents();assert not errors
+&gt;       assert w.project["experiments"][0]["status"]=="complete"
+E       AssertionError: assert 'failed' == 'complete'
+E         
+E         - complete
+E         + failed
+
+tests/test_gui.py:31: AssertionError</failure></testcase><testcase classname="tests.test_measurement" name="test_time_maps_and_gate" time="0.001" /><testcase classname="tests.test_measurement" name="test_plane_and_height_ray" time="0.007" /><testcase classname="tests.test_measurement" name="test_camera_holdout_recovery" time="0.020" /><testcase classname="tests.test_measurement" name="test_circle_geometry_and_short_arc_uncertainty" time="0.010" /><testcase classname="tests.test_measurement" name="test_original_edges_markers_and_three_ids" time="0.048" /><testcase classname="tests.test_measurement" name="test_template_learns_non_half_radius_and_circular_fusion" time="0.001" /><testcase classname="tests.test_measurement" name="test_irregular_polynomial_and_event_segmentation" time="0.002" /><testcase classname="tests.test_measurement" name="test_shared_uncertainty_does_not_average_away" time="0.015" /><testcase classname="tests.test_measurement" name="test_continuous_unwrap_and_manual_covariance" time="0.001" /><testcase classname="tests.test_measurement" name="test_tracker_promotion_and_participant_cap" time="0.001" /><testcase classname="tests.test_measurement" name="test_empty_grid_is_not_a_measured_disk" time="0.004" /><testcase classname="tests.test_operations" name="test_pending_end_to_end_exports_and_cache" time="0.202"><failure message="psutil.NoSuchProcess: process PID not found (pid=2)">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1/test_pending_end_to_end_export0')
+
+    def test_pending_end_to_end_exports_and_cache(tmp_path):
+        folder=tmp_path/"한글 공백";p=create_project(folder);p["analysis"]["radius_px"]=[28,36]
+        p["time_profile"]["status"]="pending"
+        video=make_video(tmp_path/"원본 영상.mp4",count=8,kind="single")
+        e=register(folder,p,[video],["chip_1"])[0]
+        confirm_start(e,video,0)
+&gt;       result=analyze(folder,p,e);run=Path(result["run"])
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/test_operations.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/pokerchip/pipeline.py:82: in analyze
+    start=time.perf_counter();process=psutil.Process();peak=process.memory_info().rss
+                                      ^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/psutil/__init__.py:314: in __init__
+    self._init(pid)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = psutil.Process(pid=2, status='terminated'), pid = 2, _ignore_nsp = False
+
+    def _init(self, pid, _ignore_nsp=False):
+        if pid is None:
+            pid = os.getpid()
+        else:
+            if pid &lt; 0:
+                msg = f"pid must be a positive integer (got {pid})"
+                raise ValueError(msg)
+            try:
+                _psplatform.cext.check_pid_range(pid)
+            except OverflowError as err:
+                msg = "process PID out of range"
+                raise NoSuchProcess(pid, msg=msg) from err
+    
+        self._pid = pid
+        self._name = None
+        self._exe = None
+        self._create_time = None
+        self._gone = False
+        self._pid_reused = False
+        self._hash = None
+        self._lock = threading.RLock()
+        # used for caching on Windows only (on POSIX ppid may change)
+        self._ppid = None
+        # platform-specific modules define an _psplatform.Process
+        # implementation class
+        self._proc = _psplatform.Process(pid)
+        self._last_sys_cpu_times = None
+        self._last_proc_cpu_times = None
+        self._exitcode = _SENTINEL
+        self._ident = (self.pid, None)
+        try:
+            self._ident = self._get_ident()
+        except AccessDenied:
+            # This should happen on Windows only, since we use the fast
+            # create time method. AFAIK, on all other platforms we are
+            # able to get create time for all PIDs.
+            pass
+        except ZombieProcess:
+            # Zombies can still be queried by this class (although
+            # not always) and pids() return them so just go on.
+            pass
+        except NoSuchProcess:
+            if not _ignore_nsp:
+                msg = "process PID not found"
+&gt;               raise NoSuchProcess(pid, msg=msg) from None
+E               psutil.NoSuchProcess: process PID not found (pid=2)
+
+/root/.local/lib/python3.12/site-packages/psutil/__init__.py:360: NoSuchProcess</failure></testcase><testcase classname="tests.test_operations" name="test_cancel_resume_equals_clean_and_fail_isolation" time="0.168"><failure message="psutil.NoSuchProcess: process PID not found (pid=2)">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1/test_cancel_resume_equals_clea0')
+
+    def test_cancel_resume_equals_clean_and_fail_isolation(tmp_path):
+        folder=tmp_path/"project";p=create_project(folder);p["analysis"].update(radius_px=[28,36],chunk_frames=2)
+        video=make_video(tmp_path/"a.mp4",count=10,kind="single");e=register(folder,p,[video],["chip_1"])[0]
+        confirm_start(e,video,0)
+        control=Control()
+        def callback(message):
+            if message["stage"]=="detect":control.cancelled.set()
+&gt;       with pytest.raises(Cancelled):analyze(folder,p,e,control,callback)
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_operations.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/pokerchip/pipeline.py:82: in analyze
+    start=time.perf_counter();process=psutil.Process();peak=process.memory_info().rss
+                                      ^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/psutil/__init__.py:314: in __init__
+    self._init(pid)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = psutil.Process(pid=2, status='terminated'), pid = 2, _ignore_nsp = False
+
+    def _init(self, pid, _ignore_nsp=False):
+        if pid is None:
+            pid = os.getpid()
+        else:
+            if pid &lt; 0:
+                msg = f"pid must be a positive integer (got {pid})"
+                raise ValueError(msg)
+            try:
+                _psplatform.cext.check_pid_range(pid)
+            except OverflowError as err:
+                msg = "process PID out of range"
+                raise NoSuchProcess(pid, msg=msg) from err
+    
+        self._pid = pid
+        self._name = None
+        self._exe = None
+        self._create_time = None
+        self._gone = False
+        self._pid_reused = False
+        self._hash = None
+        self._lock = threading.RLock()
+        # used for caching on Windows only (on POSIX ppid may change)
+        self._ppid = None
+        # platform-specific modules define an _psplatform.Process
+        # implementation class
+        self._proc = _psplatform.Process(pid)
+        self._last_sys_cpu_times = None
+        self._last_proc_cpu_times = None
+        self._exitcode = _SENTINEL
+        self._ident = (self.pid, None)
+        try:
+            self._ident = self._get_ident()
+        except AccessDenied:
+            # This should happen on Windows only, since we use the fast
+            # create time method. AFAIK, on all other platforms we are
+            # able to get create time for all PIDs.
+            pass
+        except ZombieProcess:
+            # Zombies can still be queried by this class (although
+            # not always) and pids() return them so just go on.
+            pass
+        except NoSuchProcess:
+            if not _ignore_nsp:
+                msg = "process PID not found"
+&gt;               raise NoSuchProcess(pid, msg=msg) from None
+E               psutil.NoSuchProcess: process PID not found (pid=2)
+
+/root/.local/lib/python3.12/site-packages/psutil/__init__.py:360: NoSuchProcess</failure></testcase><testcase classname="tests.test_operations" name="test_pause_resumes_and_correction_audit" time="0.163" /><testcase classname="tests.test_operations" name="test_atomic_write_failure_never_replaces_complete" time="0.002" /><testcase classname="tests.test_operations" name="test_equal_basename_and_hash_relink" time="0.005" /><testcase classname="tests.test_operations" name="test_independent_parameter_recovery_and_holdout" time="1.822" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[0]" time="0.018" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[1e-06]" time="0.011" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[0.001]" time="0.011" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[0.05]" time="0.009" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[0.3]" time="0.009" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[0.653]" time="0.007" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[0.99999999]" time="0.007" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[1]" time="0.014" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[1.00000001]" time="0.011" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[2]" time="0.035" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[10]" time="0.071" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[31]" time="0.016" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[100]" time="0.026" /><testcase classname="tests.test_physics" name="test_farkas_independent_area[1000000.0]" time="0.007" /><testcase classname="tests.test_physics" name="test_farkas_limits_pure_modes_and_stop" time="0.002" /><testcase classname="tests.test_physics" name="test_mixed_energy_straight_sign_and_convergence" time="0.044" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins0-0.5]" time="0.003" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins0-1]" time="0.004" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins0-2]" time="0.002" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins1-0.5]" time="0.139" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins1-1]" time="0.003" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins1-2]" time="0.001" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins2-0.5]" time="0.003" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins2-1]" time="0.004" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins2-2]" time="0.001" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins3-0.5]" time="0.001" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins3-1]" time="0.001" /><testcase classname="tests.test_physics" name="test_ifr_conservation_independent[spins3-2]" time="0.002" /><testcase classname="tests.test_physics" name="test_ifr_symmetries_and_branch" time="0.003" /><testcase classname="tests.test_physics" name="test_fast_swept_and_multi_contact" time="0.024" /><testcase classname="tests.test_study" name="test_train_never_reads_test_and_fixed_validation_never_refits" time="1.961" /><testcase classname="tests.test_study" name="test_same_original_cannot_leak_through_renamed_test_file" time="0.807" /><testcase classname="tests.test_study" name="test_modified_frozen_constants_are_rejected" time="0.807" /><testcase classname="tests.test_study" name="test_held_out_suffix_cannot_change_initial_state" time="0.308" /><testcase classname="tests.test_study" name="test_one_reviewed_collision_fits_normal_without_inventing_tangent" time="0.014" /><testcase classname="tests.test_v2" name="test_samsung_eightfold_and_not_double_divided" time="0.005" /><testcase classname="tests.test_v2" name="test_exposure_end_and_clock_validation" time="0.001" /><testcase classname="tests.test_v2" name="test_bad_calibration_cannot_be_verified_by_evidence_string" time="0.006" /><testcase classname="tests.test_v2" name="test_v1_migration_preserves_clock_and_backup" time="0.007" /><testcase classname="tests.test_v2" name="test_normal_vectors_are_normalized_and_eiv_diagnostics_match" time="4.099" /><testcase classname="tests.test_v2" name="test_black_chip_markers_and_empty_grid" time="0.100" /><testcase classname="tests.test_v2" name="test_global_assignment_ambiguity_preserves_tracks" time="0.006" /><testcase classname="tests.test_v2" name="test_independent_labels_count_false_negatives_and_lock" time="0.022" /><testcase classname="tests.test_v2" name="test_locked_test_cannot_leak" time="0.013" /><testcase classname="tests.test_v2" name="test_nonfinite_farkas_rejected" time="0.000" /><testcase classname="tests.test_v2" name="test_correlated_observation_whitening_and_missing_angle" time="0.003" /><testcase classname="tests.test_v2" name="test_profile_reoptimizes_nuisance_and_reports_limits" time="0.224" /><testcase classname="tests.test_v25" name="test_pdf_board_exact_preset_and_nominal_plane" time="0.049" /><testcase classname="tests.test_v25" name="test_floor_confirmation_and_static_segment_required" time="1.989" /><testcase classname="tests.test_v25" name="test_automatic_six_black_chips_and_generic_sticker" time="3.083" /><testcase classname="tests.test_v25" name="test_floor_grid_scale_guard" time="0.193" /><testcase classname="tests.test_v25" name="test_rim_paint_touching_colored_wood_not_merged_into_floor" time="0.007" /><testcase classname="tests.test_v25" name="test_automatic_saves_files_without_geometry_and_isolates_bad_file" time="3.620"><failure message="AssertionError: assert ['failed', 'failed'] == ['complete', 'failed']&#10;  &#10;  At index 0 diff: 'failed' != 'complete'&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1/test_automatic_saves_files_wit0')
+
+    def test_automatic_saves_files_without_geometry_and_isolates_bad_file(tmp_path):
+        folder=tmp_path/'experiment';p=create_project(folder)
+        video=folder/'chips.mp4';encode(video,(render_disks([[180+i,200]],[i*.03]) for i in range(12)))
+        exp=register(folder,p,[video,folder/'missing.mp4'],['chip_1'])
+        for e in exp:e['count_mode']='auto'
+        confirm_start(exp[0],video,0)
+        exp[1]['start_selection']={**exp[0]['start_selection']}  # confirmed source was later removed; failure stays isolated
+        result=run_automatic(folder,p,Control())
+&gt;       assert [r['status'] for r in result['results']]==['complete','failed']
+E       AssertionError: assert ['failed', 'failed'] == ['complete', 'failed']
+E         
+E         At index 0 diff: 'failed' != 'complete'
+E         Use -v to get more diff
+
+tests/test_v25.py:88: AssertionError</failure></testcase><testcase classname="tests.test_v25" name="test_v25_actual_gui_one_click_flow_and_popup_palette" time="2.922"><failure message="AssertionError: assert 'failed' == 'complete'&#10;  &#10;  - complete&#10;  + failed">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-1/test_v25_actual_gui_one_click_0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f80031ae2d0&gt;
+
+    def test_v25_actual_gui_one_click_flow_and_popup_palette(tmp_path,monkeypatch):
+        from PySide6.QtWidgets import QApplication,QFileDialog,QPushButton,QComboBox
+        from PySide6.QtGui import QPalette,QColor
+        from PySide6.QtTest import QTest
+        from PySide6.QtCore import Qt
+        from pokerchip.gui import MainWindow
+        app=QApplication.instance() or QApplication([])
+        # Simulate a system palette with white text before launching the fixed theme.
+        pal=app.palette();pal.setColor(QPalette.ColorRole.Text,QColor('white'));app.setPalette(pal)
+        folder=tmp_path/'gui';folder.mkdir();source=tmp_path/'input.mp4'
+        encode(source,(render_disks([[140+i,200]],[i*.03]) for i in range(12)))
+        monkeypatch.setattr(QFileDialog,'getExistingDirectory',lambda *a,**k:str(folder))
+        w=MainWindow();errors=[];w.error=errors.append;w.show();app.processEvents()
+        w.add_paths([str(source)]);assert w.intake_table.rowCount()==1
+        assert w.nav.count()==3 and w.tabs.currentIndex()==6
+        from PySide6.QtWidgets import QGroupBox
+        next(g for g in w.findChildren(QGroupBox) if g.title()=='보정 확인란·칩 규격·촬영 설정 펼치기').setChecked(True)
+        app.processEvents()
+        assert w.video_mode.palette().color(QPalette.ColorRole.Text).lightness()&lt;100
+        w.video_mode.showPopup();app.processEvents()
+        assert w.video_mode.view().palette().color(QPalette.ColorRole.Text).lightness()&lt;100
+        w.video_mode.hidePopup()
+        confirm_start(w.project['experiments'][0],source,0);w.save()
+        QTest.mouseClick(w.start_button,Qt.MouseButton.LeftButton)
+        wait(app,lambda:not w.quick_running and not w.busy)
+        assert not errors
+        assert w.tabs.currentIndex()==7 and (folder/'results/전체_운동데이터.csv').exists()
+&gt;       assert w.project['experiments'][0]['status']=='complete'
+E       AssertionError: assert 'failed' == 'complete'
+E         
+E         - complete
+E         + failed
+
+tests/test_v25.py:128: AssertionError</failure></testcase><testcase classname="tests.test_v3" name="test_launcher_is_not_a_black_chip" time="0.003" /><testcase classname="tests.test_v3" name="test_painted_identity_recovers_after_long_gap_and_measures_angle" time="0.031" /><testcase classname="tests.test_v3" name="test_blue_rim_does_not_merge_into_blue_tinted_dark_body" time="0.012" /><testcase classname="tests.test_v3" name="test_strong_color_does_not_authorize_an_instant_position_jump" time="0.014" /><testcase classname="tests.test_v3" name="test_boundary_hand_with_one_mark_cannot_steal_chip" time="0.026" /><testcase classname="tests.test_v3" name="test_first_rim_only_chip_can_initialize_inside_board" time="0.013" /><testcase classname="tests.test_v3" name="test_rectangular_lattice_assigns_long_axis_and_clears_old_pose" time="0.839" /><testcase classname="tests.test_v3" name="test_unknown_identity_still_gets_local_orientation" time="0.013" /><testcase classname="tests.test_v35" name="test_required_selection_rejects_old_interval_and_changed_source" time="0.001" /><testcase classname="tests.test_v35" name="test_progress_monotonic_and_names" time="0.001" /><testcase classname="tests.test_v35" name="test_noncontact_does_not_produce_material_coefficients" time="0.001" /><testcase classname="tests.test_v35" name="test_right_drag_never_places_measurement_point_and_zoom_preserves_coordinates" time="0.032" /><testcase classname="tests.test_v35" name="test_start_dialog_loaded_frame_required_and_reader_exact" time="0.346" /><testcase classname="tests.test_v35" name="test_nonidentifiable_covariance_is_not_zero_certainty" time="0.001" /><testcase classname="tests.test_v35" name="test_measurement_exclusion_survives_kinematics_for_fit_filtering" time="0.000" /><testcase classname="tests.test_v35" name="test_friction_conditioned_contact_recovers_synthetic_restitution_without_editing_observations" time="1.363" /></testsuite></testsuites>

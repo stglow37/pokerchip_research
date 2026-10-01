@@ -1,0 +1,16 @@
+{
+  "id": "time_pending",
+  "status": "pending",
+  "evidence": "",
+  "segments": [
+    {
+      "p_start": 0.0,
+      "p_end": null,
+      "t_start": 0.0,
+      "slow_factor": 1.0
+    }
+  ],
+  "frame_types": {},
+  "exposure_s": null,
+  "exposure_reference": "unknown"
+}

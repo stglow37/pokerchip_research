@@ -1,0 +1,207 @@
+{
+  "code_hash": "c17cbff7fa7ce9efb96820daec30441e24b4bc18b82c7f190a39f937becc2ecb",
+  "experiment_count": 49,
+  "video_count": 51,
+  "decoded_experiment_frames": 20710,
+  "all_final_databases": [
+    {
+      "video": "20260928_200131.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200141.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200214.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200221.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200228.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200234.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200240.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200247.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200256.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_200419.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203122.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203132.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203143.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203149.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203208.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203218.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203226.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203246.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203256.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203301.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203310.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203317.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203323.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203333.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203342.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203353.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203359.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203408.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203502.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203542.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203558.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203634.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203640.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203703.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203717.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203723.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203744.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203801.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203825.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203834.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203902.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203909.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_203916.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_204041.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_204052.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_204111.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_204117.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_204126.mp4",
+      "database_ok": true
+    },
+    {
+      "video": "20260928_204134.mp4",
+      "database_ok": true
+    }
+  ],
+  "all_final_publications_present": true,
+  "test_count": 104,
+  "scope": "nominal geometry/time; independent labels not supplied"
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "chip_1",
+    "rim_color": "red",
+    "inner_color": "blue",
+    "radius_m": 0.02,
+    "radius_status": "nominal_pending",
+    "radius_sigma_m": null,
+    "mass_kg": null,
+    "thickness_m": null,
+    "inertia_kg_m2": null,
+    "inertia_model": "pending",
+    "inner_diameter_m": 0.003,
+    "contact_model": "uniform_pressure_full_disk_assumed"
+  },
+  {
+    "id": "chip_2",
+    "rim_color": "blue",
+    "inner_color": "yellow",
+    "radius_m": 0.02,
+    "radius_status": "nominal_pending",
+    "radius_sigma_m": null,
+    "mass_kg": null,
+    "thickness_m": null,
+    "inertia_kg_m2": null,
+    "inertia_model": "pending",
+    "inner_diameter_m": 0.003,
+    "contact_model": "uniform_pressure_full_disk_assumed"
+  },
+  {
+    "id": "chip_3",
+    "rim_color": "green",
+    "inner_color": "red",
+    "radius_m": 0.02,
+    "radius_status": "nominal_pending",
+    "radius_sigma_m": null,
+    "mass_kg": null,
+    "thickness_m": null,
+    "inertia_kg_m2": null,
+    "inertia_model": "pending",
+    "inner_diameter_m": 0.003,
+    "contact_model": "uniform_pressure_full_disk_assumed"
+  }
+]

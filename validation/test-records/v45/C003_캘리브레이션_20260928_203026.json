@@ -1,0 +1,131 @@
+{
+  "id": "intrinsic_3bfbc327bd0c4e2d",
+  "K": [
+    [
+      1342.166411447814,
+      0.0,
+      540.0863576956516
+    ],
+    [
+      0.0,
+      1345.4725787727505,
+      962.6452642535043
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "distortion": [
+    0.17456862429917658,
+    -0.5143100332487227,
+    0.001131992647499447,
+    -0.00016634583515214417,
+    0.4736148266083235
+  ],
+  "image_size": [
+    1080,
+    1920
+  ],
+  "train_rms_px": 0.2942567615341387,
+  "holdout_rms_px": 0.42383910514376244,
+  "holdout_indices": [
+    3,
+    7,
+    11,
+    15,
+    19,
+    23,
+    27,
+    31,
+    35,
+    39,
+    43,
+    47,
+    51,
+    55,
+    59
+  ],
+  "train_indices": [
+    0,
+    1,
+    2,
+    4,
+    5,
+    6,
+    8,
+    9,
+    10,
+    12,
+    13,
+    14,
+    16,
+    17,
+    18,
+    20,
+    21,
+    22,
+    24,
+    25,
+    26,
+    28,
+    29,
+    30,
+    32,
+    33,
+    34,
+    36,
+    37,
+    38,
+    40,
+    41,
+    42,
+    44,
+    45,
+    46,
+    48,
+    49,
+    50,
+    52,
+    53,
+    54,
+    56,
+    57,
+    58
+  ],
+  "status": "pending",
+  "intrinsic_status": "fitted_requires_review",
+  "H": null,
+  "holdout_method": "pose_on_even_corners_error_on_odd_corners",
+  "board": {
+    "squares": [
+      11,
+      8
+    ],
+    "square_m": 0.015,
+    "marker_m": 0.011,
+    "dictionary": "DICT_4X4_50",
+    "legacy_pattern": false,
+    "paper_mm": [
+      200,
+      150
+    ],
+    "source": "calib.io_CHARUCO_200x150_8x11_15_11_DICT_4X4.pdf"
+  },
+  "capture_mode": "Samsung FHD240 slow8",
+  "lens_status": "estimated",
+  "automatic_report": {
+    "source_hash": "4d22e5e415940b89bbd2a8bf71b82fcf15b668343c06cc37629e00b6b339366c",
+    "floor_confirmed": false,
+    "stable_end": true,
+    "anchor_frame": 4230,
+    "distinct_lens_views": 60,
+    "lens_note": "별도 영상 구간의 재투영 오차 기준 통과",
+    "action": "보정 영상 끝에 판을 실험 바닥에 평평하게 놓고 2초 이상 멈춰 촬영한 뒤 바닥 확인을 체크하세요."
+  },
+  "reference_gray_shape": [
+    1920,
+    1080
+  ]
+}
