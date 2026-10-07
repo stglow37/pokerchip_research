@@ -1,0 +1,56 @@
+{
+  "parameters": {
+    "mu_bottom": 0.2586651372024384,
+    "e_normal": 0.7541381086716763
+  },
+  "status": "exploratory_not_independently_validated",
+  "coefficient_status": {
+    "mu_bottom": {
+      "status": "provisional",
+      "reason": "잠정 계수: 독립 정확도 미검증",
+      "used_trials": 6
+    },
+    "e_normal": {
+      "status": "provisional",
+      "reason": "잠정 계수: 독립 정확도 미검증",
+      "used_trials": 2
+    },
+    "e_tangential": {
+      "status": "withheld",
+      "reason": "접선 반발·충돌 마찰 분리에는 서로 다른 조건의 검토된 충돌 3개 이상 필요. 개수 충족만으로 식별 보장 안 됨.",
+      "used_trials": 2
+    },
+    "mu_collision": {
+      "status": "withheld",
+      "reason": "접선 반발·충돌 마찰 분리에는 서로 다른 조건의 검토된 충돌 3개 이상 필요. 개수 충족만으로 식별 보장 안 됨.",
+      "used_trials": 2
+    }
+  },
+  "stage_summary": {
+    "free_motion": {
+      "optimizer_success": true
+    },
+    "normal": {
+      "event_count": 2,
+      "optimizer_success": true,
+      "scope": "position_based_one_sided_observed_states_rotation_not_required",
+      "errors_in_variables": true,
+      "uncertainty_scope": "conditional_on_measured_normal_time_scale; not an independent accuracy claim"
+    },
+    "impact": {
+      "release_status": "접선 반발·충돌 마찰 분리에는 서로 다른 조건의 검토된 충돌 3개 이상 필요. 개수 충족만으로 식별 보장 안 됨."
+    }
+  },
+  "parameter_hash": "a82b9dab0c624d9aa0e21ec45b45906b9e271710ec936a4e2f550ef926e68fda",
+  "training_videos": [
+    "C004_20261001_191533.mp4",
+    "C004_20261001_191914.mp4",
+    "C005_20261001_193154.mp4",
+    "C005_20261001_193708.mp4"
+  ],
+  "trial_counts": {
+    "free_trials": 6,
+    "normal_trials": 2,
+    "impact_trials": 2
+  }
+}

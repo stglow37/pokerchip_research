@@ -16,10 +16,11 @@ def calibration_gate(profile):
         known=length.get("known_m",0)
         add(f"독립 길이 {i+1} 상대오차",abs(length["error_m"])/known if known>0 else None,limits["length_relative_error"])
     geometric=bool(checks)
+    independent=bool(profile.get("independent_lengths")) or profile.get("holdout_reference_independent") is True
     if profile.get("K") is not None:add("렌즈 holdout RMSE (px)",profile.get("holdout_rms_px"),limits["intrinsic_holdout_px"])
     evidence=bool(profile.get("evidence","").strip())
     return {"passed":geometric and evidence and all(c["passed"] for c in checks),"checks":checks,
-            "limits":limits,"has_independent_geometry":geometric,"has_evidence":evidence,
+            "limits":limits,"has_independent_geometry":independent,"absolute_accuracy_passed":independent and evidence and all(c["passed"] for c in checks),"has_evidence":evidence,
             "scope":"supplied_holdout_only; lens_unknown_if_K_missing"}
 
 def enrich_quality(db,quality,config,experiment):
@@ -47,6 +48,8 @@ def enrich_quality(db,quality,config,experiment):
             if row.get("edge_residual_px") is not None:residual.append(row["edge_residual_px"])
             if row.get("assignment_ambiguous") or row.get("status") in ("low_confidence","partially_observed"):
                 frame_issues.append({"frame":f,"chip_id":row["chip_id"],"reason":"ID 모호" if row.get("assignment_ambiguous") else "윤곽 품질 검토"})
+            if row.get('theta_wrapped_rad') is None:
+                frame_issues.append({'frame':f,'chip_id':row['chip_id'],'channel':'orientation','reason':'회전 표식 미검출 또는 방향 모호: 위치와 별도로 확인'})
             if str(row['chip_id']).startswith('unknown'):
                 frame_issues.append({'frame':f,'chip_id':row['chip_id'],'reason':'가림 후 칩 번호를 다시 확인하세요'})
             if row.get('measurement_warning'):frame_issues.append({'frame':f,'chip_id':row['chip_id'],'reason':'경계 적합 오차 큼: 그림자·가림·중심 확인'})
@@ -73,6 +76,8 @@ def enrich_quality(db,quality,config,experiment):
                  "position_bias_bound_px":max_speed_px_s*readout if readout is not None else None,
                  "angle_bias_bound_rad":omega*readout if omega is not None and readout is not None else None,
                  "scope":"conservative full-frame bound; apparent velocity can contain tracking errors"},
+             interval_selection=experiment.get('start_selection',{}),
+             release_verification='human_confirmed' if experiment.get('start_selection',{}).get('method')=='human_release_frame' else 'automatic_not_independently_verified',
              accuracy_explanation="관측 비율은 검출 정답률이 아닙니다. 독립 라벨로 중심·각도 오차와 recall을 측정하세요.")
     return q
 

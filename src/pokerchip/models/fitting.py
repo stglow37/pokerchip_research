@@ -99,7 +99,8 @@ def fit_impacts(trials, model="contact_consistent_reconstruction", eiv=True, max
             raise ValueError('탐색 충돌 피팅에도 직접 관측과 유효한 잠정 시간·거리 설정이 필요합니다.')
     else:gate(trials)
     for tr in trials:
-        if tr.get("kind")!="isolated_binary" or not tr.get("approved",False):
+        automatically_included=exploratory and tr.get('calculation_eligible',False) and tr.get('review_scope')=='automatic_exploratory'
+        if tr.get("kind")!="isolated_binary" or not (tr.get("approved",False) or automatically_included):
             raise ValueError("승인한 고립 2체 충돌만 피팅 가능")
     bodies=[[body_from_dict(b) for b in tr["bodies"]] for tr in trials]
     pre=[np.asarray(tr["pre"],float) for tr in trials]
@@ -249,7 +250,7 @@ def evaluate_holdout(trials, fit, kind):
                        "angular_momentum_residual":result["angular_momentum_residual"],"energy_change":result["delta_energy_formula"],
                        "pre":tr["pre"],"observed_post":tr["post"],"predicted_post":result["post"]}
             else:score={"status":result["status"],"reason":result["reason"]}
-        results.append({"trial_id":tr["id"],**score})
+        results.append({"trial_id":tr["id"],"calculation_warnings":tr.get('calculation_warnings',[]),"warning_observation_refs":tr.get('warning_observation_refs',[]),**score})
     return results
 
 
@@ -268,10 +269,12 @@ def fit_dataset(dataset, outdir, bootstrap_count=0):
     locked=set(split.get("locked_test",[]))
     if locked & (set(split["train"])|set(split["holdout"])):
         raise ValueError("locked test를 학습/모델선택 보류 세션에 섞을 수 없습니다.")
-    for section,func,kind in [("free_trials",fit_free,"free_motion"),("impact_trials",lambda tr:fit_impacts(tr,model),"impact_conditional")]:
+    for section,func,kind in [("free_trials",fit_free,"free_motion"),("impact_trials",lambda tr:fit_impacts(tr,model,exploratory=any(r.get('review_scope')=='automatic_exploratory' for r in tr)),"impact_conditional")]:
         if not dataset.get(section):continue
         train,held=split_trials(dataset[section],split["train"],split["holdout"],split.get("unit","session"))
         result=func(train)
+        result['calculation_warnings']=sorted({w for tr in train for w in tr.get('calculation_warnings',[])})
+        result['warning_observation_refs']=[dict(r,trial_id=tr['id']) for tr in train for r in tr.get('warning_observation_refs',[])]
         result["holdout"]=evaluate_holdout(held,result,kind)
         result["research_readiness"]={"optimizer_success":result["diagnostics"]["optimizer_success"],
             "physical_admissible":result["physical_status"]=="admissible",

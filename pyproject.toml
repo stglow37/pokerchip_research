@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pokerchip-research"
-version = "4.5.0"
+version = "6.0.0"
 description = "영상 관측과 Farkas/IFR 예측을 분리한 연구용 포커칩 도구"
 requires-python = ">=3.12,<3.15"
 dependencies = ["numpy", "scipy", "opencv-contrib-python", "av", "PySide6", "matplotlib", "openpyxl", "psutil"]

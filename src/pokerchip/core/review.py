@@ -35,7 +35,8 @@ def scope(experiment, chip, frame):
         a,b=experiment.get('interval',[0,None]);segments=[{'start':a,'end':b}]
     for s in segments:
         if s['start']<=frame and (s.get('end') is None or frame<=s['end']):
-            return {'observable':s.get('observable',True),'fit_enabled':s.get('fit_enabled',True),
+            stopped=any(a.get('chip_id')==chip and a.get('kind')=='stopped' and frame>a['frame'] for a in experiment.get('stop_annotations',[]))
+            return {'observable':s.get('observable',True),'fit_enabled':s.get('fit_enabled',True) and not stopped,
                     'scope_reason':s.get('reason','selected_interval'),'scope_segment':s['start']}
     return {'observable':False,'fit_enabled':False,'scope_reason':'outside_selected_interval','scope_segment':None}
 
@@ -91,7 +92,7 @@ def event_source_identity(experiment):
 
 def event_review_basis(event, rows, config):
     fields=('frame_index','chip_id','raw_center_px','world_center_m','theta_wrapped_rad','status','measurement_warning','scope_segment','fit_enabled')
-    return digest({'pair':event['pair'],'candidate':[event['frame_start'],event['frame_end']],
+    return digest({'policy_version':6,'pair':event['pair'],'candidate':[event['frame_start'],event['frame_end']],
         'rows':[{k:r.get(k) for k in fields} for r in rows],
         'time':config['time_profile'],'calibration':config['calibration'],'analysis':config['analysis'],
         'geometry':[{k:c.get(k) for k in ('id','radius_m','radius_sigma_m')} for c in config['chips']]})

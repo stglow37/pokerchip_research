@@ -1,3 +1,23 @@
+<!-- V6 DEVELOPMENT -->
+# v6.0.0 현재 상태 (2026-10-07)
+
+`codex/analysis-quality-and-coefficient-integration`에서 경고 포함 계산, 모든 적격 구간별 마찰 피팅, 사건별 법선/접선 진단, 계층 집계·재표본, 제출 검사·새 프로젝트 통합의 구현과 소프트웨어 인수 확인을 마쳤다. 물리식과 schema 2.0을 유지한다. 개발 당시에는 main 병합을 수행하지 않았다. 현재 GitHub 통합 대상은 v6.0.0이며 [업로드 기록](../../validation/test-records/v6/PUBLICATION_20261007_KO.md)에 기존 검증과 이번 재시험 생략, 10영상 잠정 결과를 구분한다.
+
+전체 시험은 Windows CPython 3.14.7에서 **198개 통과(78.64초)**했다. 기존 dataset/preview 장벽과 통합 세션 누락 차단을 포함한다. GUI 생성/종료·실제 4영상 프로젝트 로드, CLI 도움말, pip check는 통과했다. ZIP 재계산에서 E120 212/221 경고 관측이 충돌 전후 적합에 사용됨을 확인했다. 잠정 μ_b=0.18201687, e_n=0.67513784이며 접선 계수는 적격 2사건으로 보류했다. 원 관측 재계산+계수 저장은 137.76초, 그중 계수 작업은 62.58초다. 상세 수치·남은 보류·미검증 범위는 [실행 기록](../../validation/test-records/v6/REPORT_KO.md)에 남긴다.
+
+사용 안내는 [v6 안내](../operations/README_V6_KO.md), 분담 규약은 [통합 안내](../operations/DISTRIBUTED_ANALYSIS_V6_KO.md), 계약은 [V6_DATA_ADDITIONS_KO.md](../methods/V6_DATA_ADDITIONS_KO.md), 결정은 [ADR-008](../decisions/ADR-008-v6-warning-and-integration.md), 인수 범위는 [V6_REQUIREMENTS_KO.md](V6_REQUIREMENTS_KO.md)다. 다음은 개발에 사용하지 않은 새 촬영 세션의 독립 시간·거리 및 고정 예측 검증이다. 잠정 숫자는 참값이 아니다.
+
+---
+
+<!-- V5 RELEASE -->
+# v5.0 현재 상태
+
+자동 영상 구간·원/표식 계측·프레임 색인·충돌 변화점·탐색 계수 포함 기준·UI를 갱신했다. 수동 시작은 선택 경로로 남긴다. 기존 canonical 계층과 schema 2.0을 유지한다. 정확한 실행 결과는 [v5 검증 보고서](../../validation/test-records/v5/REPORT_KO.md)를 따른다.
+
+다음 연구 검증은 개발에 사용하지 않은 영상의 독립 라벨과 독립 길이·시간 오차 검증이다. 자동 성공률을 물리 정확도로 해석하지 않는다. 과거의 Phase 2 제안보다 명시적 사용자 요청을 우선한다.
+
+---
+
 <!-- V45 RELEASE -->
 # v4.5 현재 상태 (2026-10-01)
 

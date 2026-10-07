@@ -1,0 +1,21 @@
+{
+  "id": "intrinsic_4a089e0f0b5c408d",
+  "image_size": [
+    1080,
+    1920
+  ],
+  "train_rms_px": 0.2942567615341391,
+  "holdout_rms_px": 0.4238390491119127,
+  "status": "pending",
+  "H": null,
+  "verification_elapsed_s": 278.8946495000273,
+  "automatic_report": {
+    "source_hash": "4d22e5e415940b89bbd2a8bf71b82fcf15b668343c06cc37629e00b6b339366c",
+    "floor_confirmed": false,
+    "stable_end": true,
+    "anchor_frame": 4230,
+    "distinct_lens_views": 60,
+    "lens_note": "별도 영상 구간의 재투영 오차 기준 통과",
+    "action": "보정 영상 끝에 판을 실험 바닥에 평평하게 놓고 2초 이상 멈춰 촬영한 뒤 바닥 확인을 체크하세요."
+  }
+}

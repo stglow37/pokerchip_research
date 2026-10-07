@@ -1,0 +1,268 @@
+{
+  "elapsed_s": 1482.574164199992,
+  "scope": "development_smoke_not_independent_accuracy",
+  "videos": [
+    {
+      "name": "C004_20261001_191533.mp4",
+      "status": "complete",
+      "source_hash": "5151cccb686c30221d3d087c2ba06931137b11f28b54ff8957ed24c8e734ecef",
+      "interval": [
+        224,
+        264
+      ],
+      "participating_chip_ids": [
+        "chip_1"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 41,
+        "observation_rows": 41,
+        "physical_velocity_rows": 37,
+        "angular_velocity_rows": 37,
+        "initial_30_observations": 30,
+        "geometry_status": "provisional",
+        "event_candidates": 0,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C004_20261001_191914.mp4",
+      "status": "complete",
+      "source_hash": "bc52fceaff72f3f1b62e5bd8469e012407ec62acc9b7d0c531ae5dcfa4938213",
+      "interval": [
+        136,
+        298
+      ],
+      "participating_chip_ids": [
+        "chip_1"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 163,
+        "observation_rows": 163,
+        "physical_velocity_rows": 163,
+        "angular_velocity_rows": 163,
+        "initial_30_observations": 30,
+        "geometry_status": "provisional",
+        "event_candidates": 0,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C005_20261001_193154.mp4",
+      "status": "complete",
+      "source_hash": "9166f31db0408588a99a60a8089ccd2420a116d17660f65c53a92c396718163c",
+      "interval": [
+        230,
+        387
+      ],
+      "participating_chip_ids": [
+        "chip_1",
+        "chip_2"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 158,
+        "observation_rows": 316,
+        "physical_velocity_rows": 309,
+        "angular_velocity_rows": 309,
+        "initial_30_observations": 60,
+        "geometry_status": "provisional",
+        "event_candidates": 1,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C005_20261001_193708.mp4",
+      "status": "complete",
+      "source_hash": "9dfaab21c72798afda475389e2428907ddcc54417b37f3d74f711dd5841dcb38",
+      "interval": [
+        347,
+        563
+      ],
+      "participating_chip_ids": [
+        "chip_1",
+        "chip_2"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 217,
+        "observation_rows": 434,
+        "physical_velocity_rows": 429,
+        "angular_velocity_rows": 429,
+        "initial_30_observations": 60,
+        "geometry_status": "provisional",
+        "event_candidates": 1,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C006_20261001_195730.mp4",
+      "status": "complete",
+      "source_hash": "84d7d4a1349bd139399d2284bd1cfce8c642af6c8a4bc4b35f85f2e24c01b920",
+      "interval": [
+        356,
+        821
+      ],
+      "participating_chip_ids": [
+        "chip_1",
+        "chip_2",
+        "chip_3"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 466,
+        "observation_rows": 1398,
+        "physical_velocity_rows": 1391,
+        "angular_velocity_rows": 1391,
+        "initial_30_observations": 90,
+        "geometry_status": "provisional",
+        "event_candidates": 2,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C006_20261001_195938.mp4",
+      "status": "complete",
+      "source_hash": "49504709c6ad97d81620d4d85e12b227f4b46fa7479b1f3dfaf9a9b7723d667d",
+      "interval": [
+        235,
+        554
+      ],
+      "participating_chip_ids": [
+        "chip_1",
+        "chip_2",
+        "chip_3"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 320,
+        "observation_rows": 960,
+        "physical_velocity_rows": 933,
+        "angular_velocity_rows": 879,
+        "initial_30_observations": 90,
+        "geometry_status": "provisional",
+        "event_candidates": 2,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C007_20261001_204700.mp4",
+      "status": "complete",
+      "source_hash": "43cf29015ba0c639c1eebd042a9434fd169c1d1a76e066fecfa3ef2e99a7b66f",
+      "interval": [
+        120,
+        602
+      ],
+      "participating_chip_ids": [
+        "chip_2"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 483,
+        "observation_rows": 483,
+        "physical_velocity_rows": 481,
+        "angular_velocity_rows": 481,
+        "initial_30_observations": 30,
+        "geometry_status": "provisional",
+        "event_candidates": 0,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C007_20261001_205140.mp4",
+      "status": "complete",
+      "source_hash": "d0d95a6040e141ca71222ae9eabd54a768ea8618cc6905c451b261907470f449",
+      "interval": [
+        32,
+        207
+      ],
+      "participating_chip_ids": [
+        "chip_2"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 176,
+        "observation_rows": 176,
+        "physical_velocity_rows": 167,
+        "angular_velocity_rows": 165,
+        "initial_30_observations": 30,
+        "geometry_status": "provisional",
+        "event_candidates": 0,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C001-원판01개-E004_20260928_192442.mp4",
+      "status": "complete",
+      "source_hash": "a04a2eb33ff4b3fe96e8b30696d6af6fd6d7d1ad693fea346c00064001e09f89",
+      "interval": [
+        2,
+        201
+      ],
+      "participating_chip_ids": [
+        "chip_1"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 200,
+        "observation_rows": 200,
+        "physical_velocity_rows": 200,
+        "angular_velocity_rows": 200,
+        "initial_30_observations": 30,
+        "geometry_status": "provisional",
+        "event_candidates": 0,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C002-원판02개-E008_20260928_200214.mp4",
+      "status": "complete",
+      "source_hash": "498af68e77e8aafc4841e130997b43f30bdd93b0b7ff53dadaf957dcc5600752",
+      "interval": [
+        36,
+        248
+      ],
+      "participating_chip_ids": [
+        "chip_1",
+        "chip_2"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 213,
+        "observation_rows": 426,
+        "physical_velocity_rows": 425,
+        "angular_velocity_rows": 425,
+        "initial_30_observations": 60,
+        "geometry_status": "provisional",
+        "event_candidates": 1,
+        "fit_eligible_events": 0
+      }
+    },
+    {
+      "name": "C003-원판03개-E052_20260928_204052.mp4",
+      "status": "complete",
+      "source_hash": "a8bc1848692713924c3968fd90bd788668078059a71c3450432df70d226c06a9",
+      "interval": [
+        160,
+        442
+      ],
+      "participating_chip_ids": [
+        "chip_1",
+        "chip_2",
+        "chip_3"
+      ],
+      "failure_reason": null,
+      "quality": {
+        "frames": 283,
+        "observation_rows": 849,
+        "physical_velocity_rows": 840,
+        "angular_velocity_rows": 829,
+        "initial_30_observations": 90,
+        "geometry_status": "provisional",
+        "event_candidates": 2,
+        "fit_eligible_events": 0
+      }
+    }
+  ]
+}

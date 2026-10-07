@@ -5,7 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QProgressBar,
-    QComboBox,QCheckBox,QSpinBox,QMessageBox,QInputDialog,QSplitter,QTableWidget,QTableWidgetItem,QDialogButtonBox)
+    QComboBox,QCheckBox,QSpinBox,QMessageBox,QInputDialog,QSplitter,QTableWidget,QTableWidgetItem,QDialogButtonBox,QMenu,QGroupBox)
 from ..core.config import effective
 from ..core.review import set_endpoint,validate_boundary
 from ..core.storage import Records
@@ -16,7 +16,7 @@ class ReviewWorkflow:
     def __init__(self,folder=None):
         self.study_control=None;self.seed_context=None;self._full_dialog=None
         super().__init__(folder)
-        self.setWindowTitle('포커칩 연구실 · v4.5')
+        self.setWindowTitle('포커칩 연구실 · v6.0')
         self.setMinimumSize(960,680)
         check=Path(__file__).parent/'resources'/'checked.svg'
         self.setStyleSheet(self.styleSheet()+f'''
@@ -38,15 +38,16 @@ QLabel#title {{font-size:16pt;}}
         self.button(self.tabs.widget(7).layout(),'저장한 계수·미산출 이유 보기',self.show_constants)
         page=self.tabs.widget(2);tools=QHBoxLayout();page.layout().insertLayout(4,tools)
         self.button(tools,'영상 전체화면 (F11)',self.full_review)
-        self.button(tools,'이 칩의 정지·이탈 지정',self.chip_endpoint)
-        self.button(tools,'충돌 전후 프레임 지정',self.boundary_dialog)
-        self.button(tools,'클릭한 표식으로 이 장면 각도 수정',self.correct_marker)
+        actions=QPushButton('이 장면에서 수정할 것');menu=QMenu(actions);actions.setMenu(menu);tools.addWidget(actions)
+        for title,fn in [('칩 정지·화면 이탈',self.chip_endpoint),('충돌 직전·직후 장면',self.boundary_dialog),
+                         ('놓친 충돌 추가',self.add_missing_event),('클릭한 표식 방향 반영',self.correct_marker)]:
+            menu.addAction(title).triggered.connect(lambda checked=False,fn=fn:self.guarded(fn))
         self.show_markers=QCheckBox('표식 표시');self.show_markers.setChecked(True);tools.addWidget(self.show_markers)
         self.show_markers.toggled.connect(lambda _:self.redraw_overlay())
         self.marker_summary=QLabel('원 테두리 = 중심 측정 · 노랑 십자 = 가장자리 · 파랑 십자 = 안쪽 · 표식 없음은 회전 미측정')
         self.marker_summary.setWordWrap(True);self.marker_summary.setMaximumHeight(42)
         page.layout().insertWidget(5,self.marker_summary)
-        page.layout().setSpacing(5);self.image_view.setMinimumHeight(140)
+        page.layout().setSpacing(5);self.image_view.setMinimumHeight(240)
         for title in page.findChildren(QLabel):
             if title.objectName()=='subtitle':title.hide()
         for split in page.findChildren(QSplitter):split.setSizes([650,450])
@@ -57,7 +58,40 @@ QLabel#title {{font-size:16pt;}}
         for b in page.findChildren(QPushButton):
             if b.text()=='충돌이 아님 / 구분':b.setText('충돌 분류·피팅 제외')
             if b.text()=='표식 학습 저장':b.setText('클릭한 색을 다음 추적에 사용')
+        self.task_hint=QLabel('확인할 장면을 선택한 뒤 필요한 작업만 고르세요. 원 테두리·표식·충돌 전후를 각각 확인합니다.')
+        self.task_hint.setWordWrap(True);page.layout().insertWidget(0,self.task_hint);self.task_hint.hide()
+        advanced_names={'경계 호 재적합','ID 구간 교환','각도 보정','클릭한 색을 다음 추적에 사용','선명한 표식 기준 프레임 제안'}
+        self.advanced_review_buttons=[b for b in page.findChildren(QPushButton) if b.text() in advanced_names]
+        for b in self.advanced_review_buttons:b.hide()
+        self.advanced_review=QCheckBox('고급 수정 도구');tools.addWidget(self.advanced_review)
+        self.advanced_review.toggled.connect(lambda on:[b.setVisible(on) for b in self.advanced_review_buttons])
+        for widget in page.findChildren(QGroupBox)+page.findChildren(QCheckBox):
+            if widget is self.advanced_review or widget is self.show_markers:continue
+            if isinstance(widget,QGroupBox) or widget.text()=='상세 수치/수정 로그 보기':
+                widget.hide();self.advanced_review.toggled.connect(widget.setVisible)
+        self.click_mode.currentTextChanged.connect(self.update_task_hint)
         self.load_review_data()
+
+    def update_task_hint(self,mode):
+        help_text={'확대·조회':'오른쪽 드래그로 이동, 휠로 확대합니다. 측정값을 바꾸지 않습니다.',
+            '중심 보정 클릭':'선택한 칩의 실제 원 중심을 클릭하세요. 수정 이유를 저장한 후 재분석합니다.',
+            '가장자리 색 표시 클릭':'선택 칩의 칠한 가장자리 한 곳을 클릭하세요. 이 장면의 방향 보정이 바로 저장됩니다.',
+            '안쪽 스티커 클릭':'스티커 중심을 클릭하세요. 색 학습용입니다. 원판 중심으로 쓰지 않습니다. 고급 도구에서 색 학습을 저장할 수 있습니다.',
+            '격자 대응점 클릭':'교차점을 클릭하고 칸 번호를 입력합니다. 거리 보정이 실패한 영상에만 필요합니다.'}
+        self.task_hint.setText(help_text.get(mode,''))
+        self.task_hint.setVisible(mode!='확대·조회')
+
+    def add_missing_event(self):
+        self.require_editable_frame()
+        ids=self.current_exp['participating_chip_ids']
+        if len(ids)<2:raise ValueError('두 칩 이상인 영상에서 충돌을 추가할 수 있습니다.')
+        pairs=[a+' / '+b for i,a in enumerate(ids) for b in ids[i+1:]]
+        pair,ok=QInputDialog.getItem(self,'놓친 충돌 추가','현재 장면에서 접촉한 두 칩',pairs,0,False)
+        if not ok:return
+        f=self.current_frame
+        self.edit('add_event',{'pair':pair.split(' / '),'closest_frame':f,'frame_start':max(0,f-2),'frame_end':f+2},
+            '원본 영상에서 사람이 발견한 누락 충돌 후보')
+        self.review_details.appendPlainText('충돌 후보 저장. 보정 반영 재분석 뒤 전후 장면과 피팅 조건을 확인하세요.')
 
     def require_editable_frame(self):
         self.require()
@@ -94,7 +128,11 @@ QLabel#title {{font-size:16pt;}}
             return self.grid_click(x,y)
         if self.seed_context!=context:self.clear_seeds()
         self.seed_context=context
-        return super().image_click(x,y)
+        result=super().image_click(x,y)
+        if self.click_mode.currentText()=='가장자리 색 표시 클릭' and 'rim' in self.marker_seeds:
+            self.correct_marker()
+            self.task_hint.setText('가장자리 방향 보정 저장됨 · 보정 반영 재분석을 누르면 각속도까지 갱신됩니다.')
+        return result
 
     def save_template(self):
         context=self.require_editable_frame()
@@ -154,12 +192,14 @@ QLabel#title {{font-size:16pt;}}
             if not ok or choice=='점 계속 추가':return
             if choice=='이 영상의 수동 점 초기화':self.current_exp['manual_grid_points']=[];self.save();return
             from ..measurement.calibration import fit_plane
-            sx,sy=(.43/18,.405/18) if choice.startswith('긴') else (.405/18,.43/18)
+            short,long=sorted(self.project.get('quick_setup',{}).get('floor_grid_pitches_m',[.405/18,.43/18]))
+            sx,sy=(long,short) if choice.startswith('긴') else (short,long)
             px=[s['pixel'] for s in samples];world=[[s['grid'][0]*sx,-s['grid'][1]*sy] for s in samples]
             cal=fit_plane(px[:-2],world[:-2],effective(self.project,self.current_exp)['calibration'],
                 holdout={'pixel_points':px[-2:],'world_points':world[-2:]},evidence='user_grid_indices_separate_holdout')
+            cal.update(status='provisional',validation_scope='same_grid_consistency_not_independent_accuracy')
             self.current_exp['calibration']=cal;self.current_exp['manual_plane_locked']=True;self.save()
-            QMessageBox.information(self,'이 영상 거리 보정 저장',f"독립 점 오차: {cal['holdout_rmse_m']*1000:.2f} mm\n판정: {cal['status']}\n보정 반영 재분석을 실행하세요.")
+            QMessageBox.information(self,'이 영상 거리 보정 저장',f"입력에 쓰지 않은 격자 점 오차: {cal['holdout_rmse_m']*1000:.2f} mm\n판정: {cal['status']}\n보정 반영 재분석을 실행하세요.")
 
     def chip_endpoint(self):
         _,frame,chip=self.require_editable_frame()
@@ -232,7 +272,7 @@ QLabel#title {{font-size:16pt;}}
                 a,b=[s.value() for s in spins]
                 if loaded!=[a,b]:raise ValueError('두 프레임이 모두 표시될 때까지 기다리세요.')
                 validate_boundary(a,b)
-                self.edit('event',{'contact_frame_interval':[a,b],'unusable_frame_intervals':[],
+                self.edit('event',{'contact_frame_interval':[a,b],'unusable_frame_intervals':event.get('unusable_frame_intervals',[]),
                     'review_basis':event.get('review_basis'),'status':'review_required','contact_occurrence':'actual'},
                     '사용자가 원본 전후 장면 확인',frames=[event['frame_start'],event['frame_end']],event_id=event['id'])
                 d.accept()
@@ -243,7 +283,7 @@ QLabel#title {{font-size:16pt;}}
         self.require_editable_frame();i=self.event_table.currentRow()
         if i<0:raise ValueError('충돌 목록에서 하나를 선택하세요.')
         ev=self.events[i]
-        if not ev.get('review_basis'):raise ValueError('이전 버전 분석입니다. v4.5에서 보정 반영 재분석 후 확인하세요.')
+        if not ev.get('review_basis'):raise ValueError('이전 버전 분석입니다. v5.0에서 보정 반영 재분석 후 확인하세요.')
         after={'review_basis':ev['review_basis']}
         if approved:
             if ev['kind']!='isolated_binary':raise ValueError('전후 측정이 가능한 단독 두 칩 충돌만 계수 계산에 사용할 수 있습니다. 전후 프레임과 추적을 먼저 확인하세요.')
@@ -268,7 +308,8 @@ QLabel#title {{font-size:16pt;}}
         for r in self.current_rows:
             if r.get('status')=='outside_interval':continue
             center=tuple(np.round(r['raw_center_px']).astype(int));radius=int(r['radius_px'])
-            cv2.circle(img,center,radius,(60,200,70),2);cv2.putText(img,r['chip_id'],(center[0]-radius,center[1]-radius-4),0,.6,(60,220,70),2)
+            from ..measurement.overlay import draw_observation
+            draw_observation(img,r,markers=False)
             entry=r.get('markers',{}).get(r['chip_id'],{});found=[]
             for role,color in [('rim',(30,220,255)),('inner',(255,160,50))]:
                 point=(entry.get(role) or {}).get('point_px') if isinstance(entry.get(role),dict) else None
@@ -277,7 +318,18 @@ QLabel#title {{font-size:16pt;}}
                     if self.show_markers.isChecked():
                         p=tuple(np.round(point).astype(int));cv2.drawMarker(img,p,color,cv2.MARKER_CROSS,14,2);cv2.line(img,center,p,color,1)
             labels.append(r['chip_id']+': '+(' · '.join(found) or '표식 미검출')+(' · 각도 있음' if r.get('theta_wrapped_rad') is not None else ' · 회전 미측정'))
+            from ..core.observation_policy import warnings
+            if warnings(r):labels[-1]+=' · 경고 포함: '+', '.join(warnings(r))
+        details=[]
+        if self.current_run:
+            with Records(self.current_run/'records.sqlite',readonly=True) as db:
+                derived=list(db.rows('trajectories',start=self.slider.value(),end=self.slider.value()))
+            for r in derived:
+                if r.get('uses_warned_observations'):
+                    labels.append(r['chip_id']+' 계산: 경고 관측 '+str(r.get('warning_observation_count',0))+'개 포함')
+                    details.append(r['chip_id']+': '+str(r.get('warning_observation_refs',[])))
         self.image_view.set_image(img);self.marker_summary.setText(' | '.join(labels) or '현재 장면에 관측된 칩이 없습니다.')
+        self.marker_summary.setToolTip('\n'.join(details))
 
     def load_review_data(self):
         super().load_review_data()
@@ -286,6 +338,11 @@ QLabel#title {{font-size:16pt;}}
             if interval:
                 self.event_table.item(i,2).setText(f'{interval[0]} → {interval[1]}')
                 self.event_table.item(i,2).setToolTip(f"후보 탐색 범위 {event['frame_start']}–{event['frame_end']} / 표시한 두 프레임은 유효 전후 표본")
+            reasons=event.get('calculation_warnings',[])+event.get('automatic_fit_gate',{}).get('warnings',[])
+            refs=event.get('warning_observation_refs',[])
+            if reasons:
+                self.event_table.item(i,3).setText(self.event_table.item(i,3).text()+' · 경고 포함')
+                self.event_table.item(i,3).setToolTip(', '.join(sorted(set(reasons)))+'\n원인 관측: '+str(refs))
         if not self.current_run or self.graph_kind.currentIndex()==1:return
         with Records(self.current_run/'records.sqlite') as db:rows=list(db.rows('trajectories'))
         rows=[r for r in rows if r.get('status') not in ('outside_interval','missing','predicted_only')]
@@ -337,6 +394,9 @@ QLabel#title {{font-size:16pt;}}
         chips=QComboBox();chips.addItems([self.chip_choice.itemText(i) for i in range(self.chip_choice.count())]);chips.setCurrentText(self.chip_choice.currentText());chips.currentTextChanged.connect(self.chip_choice.setCurrentText);bar.addWidget(chips)
         modes=QComboBox();modes.addItems([self.click_mode.itemText(i) for i in range(self.click_mode.count())]);modes.setCurrentIndex(self.click_mode.currentIndex());modes.currentIndexChanged.connect(self.click_mode.setCurrentIndex);bar.addWidget(modes)
         close=QPushButton('전체화면 닫기 (Esc)');close.clicked.connect(d.accept);bar.addWidget(close)
+        actions=QHBoxLayout();layout.addLayout(actions)
+        for title,action in [('표식 클릭 반영',self.correct_marker),('충돌 전후 지정',self.boundary_dialog),('정지·이탈 지정',self.chip_endpoint)]:
+            button=QPushButton(title);button.clicked.connect(lambda checked=False,fn=action:self.guarded(fn));actions.addWidget(button)
         layout.addWidget(host,1)
         try:d.showFullScreen();d.exec()
         finally:split.insertWidget(index,host);split.setSizes(sizes);self._full_dialog=None;d.deleteLater()
@@ -355,7 +415,9 @@ QLabel#title {{font-size:16pt;}}
             elapsed=value.get('elapsed_s',0);calls=value.get('evaluations',0)
             self.work_label.setText(f'{message} · {elapsed:.0f}초 · 모델 평가 {calls}회')
             if value.get('indeterminate'):self.work_progress.setRange(0,0)
-            else:self.work_progress.setRange(0,100);self.work_progress.setValue(round(value.get('overall_percent',0)))
+            else:
+                self.work_progress.setRange(0,100)
+                if value.get('overall_percent') is not None:self.work_progress.setValue(round(value['overall_percent']))
         elif self.quick_running:
             self.work_label.setText(self.progress_text.text());self.work_progress.setRange(0,100)
             self.work_progress.setValue(self.progress.value())
@@ -365,6 +427,7 @@ QLabel#title {{font-size:16pt;}}
         if self.busy or self.quick_running:raise ValueError('진행 중인 작업을 먼저 마치세요.')
         from ..models.study import train_constants
         if not any(e.get('fit_role')=='train' for e in self.project['experiments']):raise ValueError('먼저 계수 구하기용 영상을 지정하세요.')
+        self.work_progress.setRange(0,100);self.work_progress.setValue(0)
         self.study_control=Control();folder=self.folder;snapshot=copy.deepcopy(self.project);control=self.study_control
         self.background(lambda:train_constants(folder,snapshot,progress=self.signals.job.emit,control=control),self.study_trained,'공통 계수 계산')
 
@@ -385,6 +448,11 @@ QLabel#title {{font-size:16pt;}}
         for key,name in names.items():
             status=bank.get('coefficient_status',{}).get(key,{})
             lines.append(name+': '+(f"{bank['parameters'][key]:.6g}" if key in bank['parameters'] else '계산 보류')+'\n'+status.get('reason','상세 기록 확인'))
+            uncertainty=bank.get('reliability',{}).get(key,{})
+            lines[-1]+='\n사용 입력 '+str(status.get('used_trials',0))+' · 영상 '+str(status.get('independent_videos','?'))+' · 세션 '+str(status.get('sessions','?'))
+            lines[-1]+='\n재표본 95% 구간: '+str(uncertainty.get('interval95'))+' · '+uncertainty.get('scope','미산출')
+            lines[-1]+='\n경고 관측 '+str(status.get('warning_observations',0))+'개 · 비율 '+str(status.get('warning_observation_fraction'))+'\n'+', '.join(status.get('calculation_warnings',[]))
+        lines.append('경고 포함 관측 '+str(len(bank.get('warning_observation_refs',[])))+'개\n'+', '.join(bank.get('calculation_warnings',[])))
         lines.append('숫자가 나왔다는 사실은 정확도 검증이 아닙니다. 저장 계수로 다른 영상을 비교하세요.')
         QMessageBox.information(self,'계수별 상태','\n\n'.join(lines))
 
@@ -407,6 +475,7 @@ QLabel#title {{font-size:16pt;}}
         if self.busy or self.quick_running:raise ValueError('진행 중인 작업을 먼저 마치세요.')
         if not self.project.get('constant_bank'):raise ValueError('계수를 먼저 구하거나 저장된 계수 파일을 연결하세요.')
         from ..models.study import evaluate_fixed
+        self.work_progress.setRange(0,100);self.work_progress.setValue(0)
         self.study_control=Control();folder=self.folder;snapshot=copy.deepcopy(self.project);control=self.study_control
         self.background(lambda:evaluate_fixed(folder,snapshot,folder/snapshot['constant_bank'],progress=self.signals.job.emit,control=control),self.study_tested,'고정 계수 검증')
 

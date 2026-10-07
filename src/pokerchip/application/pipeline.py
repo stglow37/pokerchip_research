@@ -35,7 +35,7 @@ PACKAGE_ROOT=Path(__file__).resolve().parents[1]
 CODE_SCOPES={
     # Include shared core primitives conservatively. A false cache miss is
     # preferable to reusing scientific output after relevant code changed.
-    "measurement":("__init__.py","core","measurement","application/pipeline.py"),
+    "measurement":("__init__.py","core","measurement","application/pipeline.py","application/automatic.py","application/interval_proposal.py"),
     "analysis":("__init__.py","core","analysis","application/pipeline.py"),
     "physics":("__init__.py","core","analysis","models","application/pipeline.py"),
     "export":("__init__.py","core","analysis","models","application/exporting.py","application/delivery.py","application/review_sheet.py"),
@@ -207,6 +207,8 @@ def analyze(folder,project,experiment,control=None,progress=None):
         if experiment.get('quick_workflow',False):
             from .review_sheet import save_sheet
             check();save_sheet(source,run)
+            from .board_view import save_board_view
+            save_board_view(source,run)
         manifest["stages"]["export"]="complete";manifest["status"]="complete";manifest["completed"]=stamp()
         atomic_json(run/"manifest.json",manifest)
         atomic_json(indexpath,{"run":str(run.relative_to(folder))})
@@ -262,26 +264,67 @@ def derive(path,config,experiment,check,report):
             event["id"]=event_identity(event_source_identity(experiment),event)
             events.append(event)
             if len(events)>10000:raise ValueError("사건 후보 10000개 초과: 분석 구간/ROI를 분할하세요.")
-        classify_graph(events)
-        final_events=[]
+        # User-added contacts are explicit candidate evidence, not invented states.
+        for edit in edits:
+            if edit['action']!='add_event':continue
+            value=edit['after'];pair=value['pair'];anchor=value['closest_frame']
+            if any(set(q['pair'])==set(pair) and q['frame_start']<=anchor<=q['frame_end'] for q in events):continue
+            ev={**value,'kind':'unmeasurable','status':'review_required','fit_eligible':False,
+                'evidence':'human_added_candidate','gap_unit':'m','min_gap':0.}
+            ev['id']=event_identity(event_source_identity(experiment),ev);events.append(ev)
+        events.sort(key=lambda e:e['closest_frame'])
+        from ..analysis.kinematics import suggest_boundary
+        prepared=[]
         for event in events:
             check()
-            # The one-sided windows must stop at every other event involving that chip.
-            def get_rows(chip,start,end):
-                for other in events:
-                    if other is event or chip not in other["pair"]:continue
-                    if other["frame_end"]<event["frame_start"]:start=max(start,other["frame_end"]+1)
-                    if other["frame_start"]>event["frame_end"]:end=min(end,other["frame_start"]-1)
-                return db.rows("manual",chip,start,end)
-            review_rows=[r for chip in event['pair'] for r in get_rows(chip,max(0,event['frame_start']-config['analysis']['max_window_samples']),event['frame_end']+config['analysis']['max_window_samples'])]
+            review_rows=[r for chip in event['pair'] for r in db.rows('manual',chip,
+                max(0,event['frame_start']-config['analysis']['max_window_samples']),event['frame_end']+config['analysis']['max_window_samples'])]
             basis=event_review_basis(event,review_rows,config)
             matched=[x for x in edits if x['action']=='event' and x['target'].get('event_id')==event['id']]
-            valid_edits=[x for x in matched if x['after'].get('review_basis')==basis]
+            valid=[x for x in matched if x['after'].get('review_basis')==basis]
             pending=dict(event)
-            for edit in valid_edits:pending.update({k:v for k,v in edit['after'].items() if k in ('contact_frame_interval','unusable_frame_intervals','contact_occurrence')})
+            for edit in valid:
+                pending.update({k:v for k,v in edit['after'].items() if k in
+                    ('contact_frame_interval','unusable_frame_intervals','contact_occurrence')})
+                if edit['after'].get('kind')=='noncontact_pass':pending['kind']='noncontact_pass'
             if pending.get('contact_frame_interval'):
                 validate_boundary(*pending['contact_frame_interval'],pending.get('unusable_frame_intervals',[]))
-            result=refine_event(pending,get_rows,config['analysis'],config['chips'])
+                if pending['kind'] in ('persistent_contact','near_simultaneous','simultaneous_multi_contact'):pending['kind']='unmeasurable'
+            elif pending.get('contact_occurrence')!='none':
+                def change_point_rows(chip,start,end):
+                    # A second collision must not use the first impulse as its
+                    # incoming straight-line motion. Earlier proposals already
+                    # exist because candidates are processed chronologically.
+                    for prior,*_ in prepared:
+                        if chip not in prior['pair'] or prior.get('kind')=='noncontact_pass':continue
+                        pb=prior.get('contact_frame_interval') or prior.get('automatic_boundary_proposal')
+                        if pb and pb[1]<pending['closest_frame']:start=max(start,pb[1])
+                    for future in events:
+                        if chip in future['pair'] and future['closest_frame']>pending['closest_frame']:
+                            end=min(end,future['closest_frame']-1)
+                    return db.rows('manual',chip,start,end)
+                proposal=suggest_boundary(pending,change_point_rows)
+                if proposal:
+                    pending['automatic_boundary_proposal']=proposal
+                    # A long distance candidate is not evidence of persistent contact.
+                    if pending['kind']=='persistent_contact':pending['kind']='unmeasurable'
+            prepared.append((pending,basis,matched,valid,review_rows))
+        final_events=[]
+        def boundary(e):
+            return e.get('contact_frame_interval') or e.get('automatic_boundary_proposal') or [e['frame_start'],e['frame_end']]
+        for event,basis,matched,valid_edits,review_rows in prepared:
+            check()
+            def get_rows(chip,start,end):
+                ea,eb=boundary(event)
+                for other,*_ in prepared:
+                    if other is event or chip not in other['pair'] or other.get('contact_occurrence')=='none' or other.get('kind')=='noncontact_pass':continue
+                    oa,ob=boundary(other)
+                    if ob<=ea:start=max(start,ob)
+                    elif oa>=eb:end=min(end,oa)
+                return db.rows('manual',chip,start,end)
+            if event.get('kind')=='noncontact_pass' or event.get('contact_occurrence')=='none':
+                result={**event,'kind':'noncontact_pass','fit_eligible':False,'status':'excluded'}
+            else:result=refine_event(event,get_rows,config['analysis'],config['chips'])
             result['fit_scope_allowed']=all(r.get('fit_enabled',True) for r in review_rows if event['frame_start']<=r['frame_index']<=event['frame_end'])
             result['review_basis']=basis
             for edit in valid_edits:
@@ -291,7 +334,11 @@ def derive(path,config,experiment,check,report):
                 result['fit_eligible']=result.get('status')=='approved' and result['kind']=='isolated_binary' and result['fit_scope_allowed']
             if matched and not valid_edits:result.update(status='review_required',fit_eligible=False,reason='측정/설정 변경: 충돌을 다시 확인하세요.')
             final_events.append(result)
-            db.put("events",event["closest_frame"],event["id"],result)
+        classify_graph(final_events,uncertainty_frames=0)
+        for event in final_events:
+            from ..analysis.kinematics import automatic_impact_gate
+            event['automatic_fit_gate']=automatic_impact_gate(event)
+            db.put('events',event['closest_frame'],event['id'],event)
         angle_state={}
         for index,row in enumerate(db.rows("manual")):
             if index%100==0:check();report("kinematics",row["frame_index"])
@@ -300,6 +347,7 @@ def derive(path,config,experiment,check,report):
             half=config["analysis"]["max_window_samples"]//2
             neighbors=[r for r in db.rows("manual",row["chip_id"],row["frame_index"]-half,row["frame_index"]+half) if r.get("scope_segment")==row.get("scope_segment")]
             result=kinematic_at(row,neighbors,config["analysis"],barriers)
+            result['metric_calculation_status']=result['calculation_status']
             # Always export pixel-space derivatives, with the same gap/event gates.
             pixel_rows=[]
             for r in neighbors:
@@ -308,6 +356,11 @@ def derive(path,config,experiment,check,report):
             target=next((r for r in pixel_rows if r['frame_index']==row['frame_index']),None)
             if target:
                 pixel=kinematic_at(target,pixel_rows,config['analysis'],barriers)
+                result['pixel_calculation_status']=pixel['calculation_status']
+                result['pixel_warning_audit']={k:pixel.get(k) for k in ('calculation_warnings','warning_observation_refs','used_observation_refs','warning_observation_count','used_observation_count','warning_observation_fraction','uses_warned_observations')}
+                if result.get('world_center_m') is None and pixel['calculation_status'].startswith('computed'):
+                    result.update(result['pixel_warning_audit'])
+                    result['calculation_status']='partially_computed_with_warnings' if pixel.get('uses_warned_observations') else 'partially_computed'
                 for dest,src in [('vx_px_s','vx_m_s'),('vy_px_s','vy_m_s'),('ax_px_s2','ax_m_s2'),('ay_px_s2','ay_m_s2')]:result[dest]=pixel.get(src)
                 if result.get('world_center_m') is None and pixel.get('omega_rad_s') is not None:
                     for key in ('omega_rad_s','alpha_rad_s2','theta_unwrapped_rad','omega_sigma_rad_s','angle_status'):result[key]=pixel.get(key)

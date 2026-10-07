@@ -21,6 +21,11 @@ FIELDS={
 for _table in ('manual','trajectories'):
     FIELDS[_table]+= ['observable','fit_enabled','scope_reason','scope_segment','position_status','orientation_status']
 FIELDS['events']+=['candidate_frame_interval','contact_frame_interval','boundary_frame_interval','unusable_frame_intervals','review_basis','review_reason']
+for _table in ('observations','manual','trajectories','events'):
+    FIELDS[_table]+=['measurement_warning','calculation_status','calculation_warnings',
+                    'uses_warned_observations','warning_observation_count','used_observation_count',
+                    'warning_observation_fraction','warning_observation_refs']
+FIELDS['trajectories']+=['metric_calculation_status','pixel_calculation_status','pixel_warning_audit']
 
 
 def flatten(row):
@@ -43,6 +48,18 @@ def table_csv(path,fields,rows):
         writer=csv.DictWriter(stream,fieldnames=fields,extrasaction="ignore")
         writer.writeheader()
         for row in rows:writer.writerow({k:safe_cell(v) for k,v in flatten(row).items()})
+
+
+def summary_workbook(path,tables):
+    """Bounded human-readable summaries; nested provenance stays JSON text."""
+    book=Workbook();book.remove(book.active)
+    for name,(fields,rows) in tables.items():
+        sheet=book.create_sheet(name);sheet.append(fields)
+        for row in rows:sheet.append([safe_cell(row.get(k)) for k in fields])
+        sheet.freeze_panes='A2';sheet.auto_filter.ref=sheet.dimensions
+        for cell in sheet[1]:cell.font=Font(bold=True)
+        for column in sheet.columns:sheet.column_dimensions[column[0].column_letter].width=24
+    book.save(path)
 
 
 def export_run(run):
@@ -73,8 +90,9 @@ def export_run(run):
         from ..analysis.quality import enrich_quality
         quality=enrich_quality(db,quality,config,experiment)
         quality['measurement_status']='review_required' if quality['review_frame_count'] or not angles else 'provisional_measurements_available'
-        quality['initial_30_observations']=sum(1 for r in db.rows('observations') if r['frame_index']<30)
+        quality['initial_30_observations']=sum(1 for r in db.rows('observations') if experiment['interval'][0]<=r['frame_index']<experiment['interval'][0]+30)
         quality['blur_review_rows']=sum(bool(r.get('measurement_warning')) for r in db.rows('observations'))
+        quality['warned_calculation_rows']=sum(bool(r.get('uses_warned_observations')) for r in db.rows('trajectories'))
         quality['floor_boundary_rows']=sum(r.get('surface_status')=='floor_boundary' for r in db.rows('observations'))
         grouped={}
         for issue in quality.get('review_issues',[]):
@@ -152,6 +170,8 @@ def plot_trajectories(db,path):
         ax.set_title(title,fontsize=10);ax.grid(alpha=.25)
         if rows:ax.legend(fontsize=7)
     for ax in (axes[0,1],axes[1,0],axes[1,1]):ax.set_xlabel("decoded frame index")
+    axes[0,0].set_aspect("equal",adjustable="datalim")
+    if rows and not all(r.get("world_center_m") is not None for r in rows):axes[0,0].invert_yaxis()
     fig.savefig(path,dpi=140);plt.close(fig)
 
 
@@ -169,10 +189,8 @@ def overlay(run,source,destination=None):
             for timing,image in frames(source,start=exp["interval"][0],end=exp["interval"][1]):
                 f=timing["frame_index"]
                 records=list(db.rows("manual",start=f,end=f));ft=next(db.rows("frames",start=f,end=f),timing)
-                for row in records:
-                    center=tuple(np.round(row["raw_center_px"]).astype(int));radius=int(row["radius_px"])
-                    color=(50,200,40) if row.get("source")!="manual_corrected" else (0,200,255)
-                    cv2.circle(image,center,radius,color,2);cv2.putText(image,row["chip_id"],(center[0]-radius,center[1]-radius-5),cv2.FONT_HERSHEY_SIMPLEX,.6,color,2)
+                from ..measurement.overlay import draw_observation
+                for row in records:draw_observation(image,row)
                 label=f"frame {f} | presentation {timing['presentation_time_s']} s | physical {ft.get('physical_time_s')} s"
                 cv2.putText(image,label,(16,28),cv2.FONT_HERSHEY_SIMPLEX,.55,(30,30,255),2)
                 if stream is None:

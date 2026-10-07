@@ -1,0 +1,74 @@
+[
+  {
+    "frame": 0,
+    "elapsed_s": 0.07538030005525798,
+    "exact_pixels": true,
+    "exact_timing": true,
+    "fast": true,
+    "fallback": null,
+    "cache_bytes": 0
+  },
+  {
+    "frame": 115,
+    "elapsed_s": 23.6088991999859,
+    "exact_pixels": true,
+    "exact_timing": true,
+    "fast": true,
+    "fallback": null,
+    "cache_bytes": 6220800
+  },
+  {
+    "frame": 301,
+    "elapsed_s": 0.16890499996952713,
+    "exact_pixels": true,
+    "exact_timing": true,
+    "fast": true,
+    "fallback": null,
+    "cache_bytes": 12441600
+  },
+  {
+    "frame": 601,
+    "elapsed_s": 0.2787077999673784,
+    "exact_pixels": true,
+    "exact_timing": true,
+    "fast": true,
+    "fallback": null,
+    "cache_bytes": 18662400
+  },
+  {
+    "frame": 300,
+    "elapsed_s": 0.16080009995494038,
+    "exact_pixels": true,
+    "exact_timing": true,
+    "fast": true,
+    "fallback": null,
+    "cache_bytes": 24883200
+  },
+  {
+    "frame": 116,
+    "elapsed_s": 0.20719420001842082,
+    "exact_pixels": true,
+    "exact_timing": true,
+    "fast": true,
+    "fallback": null,
+    "cache_bytes": 31104000
+  },
+  {
+    "frame": 42,
+    "elapsed_s": 0.13995089998934418,
+    "exact_pixels": true,
+    "exact_timing": true,
+    "fast": true,
+    "fallback": null,
+    "cache_bytes": 37324800
+  },
+  {
+    "frame": 602,
+    "elapsed_s": 0.2804208999732509,
+    "exact_pixels": true,
+    "exact_timing": true,
+    "fast": true,
+    "fallback": null,
+    "cache_bytes": 43545600
+  }
+]

@@ -1,12 +1,14 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-echo PokerChip Research v4.5 - Python 3.12 to 3.14
+echo PokerChip Research v6.0 - Python 3.12 to 3.14
 python --version
 if errorlevel 1 goto failed
 if not exist ".venv\Scripts\python.exe" python -m venv .venv
 if errorlevel 1 goto failed
 ".venv\Scripts\python.exe" -m pip install -r requirements-lock.txt
+if errorlevel 1 goto failed
+".venv\Scripts\python.exe" -m pip install -e . --no-deps --no-build-isolation
 if errorlevel 1 goto failed
 ".venv\Scripts\python.exe" -m pip check
 if errorlevel 1 goto failed

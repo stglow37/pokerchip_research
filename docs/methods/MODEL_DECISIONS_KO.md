@@ -1,3 +1,17 @@
+<!-- V6 DEVELOPMENT -->
+# v6 계산·집계 정책
+
+경고와 필수 입력 장벽 분리, 구간/영상/세션 집계, 관측 통합은 [ADR-008](../decisions/ADR-008-v6-warning-and-integration.md)을 따른다. Farkas/IFR 식·부호·단위는 변경하지 않는다. 약한 품질과 수치적 특이성은 같은 조건이 아니다. rank-deficient 피팅 후보는 저장하되 대표계수 집계에서 제외한다. 자동 충돌 포함은 사람이 승인한 것으로 기록하지 않는다.
+
+---
+
+<!-- V5 RELEASE -->
+# v5 변경 범위
+
+Farkas/IFR의 물리식·부호·지원 범위는 변경하지 않았다. 자동 구간과 자동 탐색 피팅 포함 기준은 [ADR-007](../decisions/ADR-007-v5-observation-first.md), 추가 데이터 계약은 [V5_DATA_ADDITIONS_KO.md](V5_DATA_ADDITIONS_KO.md)를 따른다. 법선 EIV와 충돌 시각 상태 covariance를 보완했으며, 조건부 불확실성을 독립 정확도라고 표시하지 않는다.
+
+---
+
 # 수학 모델과 구현 결정
 
 버전 1.0.0. SI 내부 단위, world x/y 평면, y 위쪽, 각도·각속도 반시계 양수입니다. 상태는 `[x,y,vx,vy,theta,omega]`입니다. 영상 pixel y는 아래쪽입니다. 입력 논문과 전달 메모는 검토 자료이며, 인쇄식을 무조건 정확하다고 취급하지 않았습니다.

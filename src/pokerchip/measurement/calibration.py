@@ -69,6 +69,7 @@ def fit_plane(pixel_points, world_points, base=None, holdout=None, independent_l
               "inliers": mask.ravel().tolist(), "evidence": evidence,
               "pixel_points": px.tolist(), "world_points": world.tolist(),
               "height_status": "unknown_unless_pose_and_thickness", "holdout_rmse_m": None}
+    result.update(pose_R=None,pose_t=None)
     if base.get("K") is not None:
         xyz = np.column_stack([world, np.zeros(len(world))])
         ok, rv, tv = cv2.solvePnP(xyz, px, np.array(base["K"], float), np.asarray(base.get("distortion") or [], float))

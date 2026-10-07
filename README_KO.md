@@ -1,16 +1,20 @@
-# PokerChip Astra v4.5
+# PokerChip Astra v6.0
 
-**현재 사용법은 [v4.5 한국어 사용설명서](docs/operations/README_V45_KO.md), 변경 사항과 시험 범위는 [v4.5 인수·검증 보고서](validation/test-records/v45/REPORT_KO.md)를 보세요.**
+현재 v6.0.0의 사용법은 [v6 안내](docs/operations/README_V6_KO.md), 분담 분석은 [통합 가이드](docs/operations/DISTRIBUTED_ANALYSIS_V6_KO.md), 구현·검증 범위는 [요구사항 인수 확인](docs/development/V6_REQUIREMENTS_KO.md)과 [실행 기록](validation/test-records/v6/REPORT_KO.md)을 보세요. 품질 경고가 있어도 유효 입력은 계산하되 사유를 남깁니다. 아래 v5/v4 설명은 계승한 이력입니다.
 
-검정 칩·가장자리 색 표시·안쪽 스티커를 사용하는 연구용 프로그램입니다. 사람이 시작 장면을 확인한 뒤 자동 분석하고, 충돌 전후·표식·화면 이탈을 검토합니다. 측정 완료와 실제 정확도 검증을 구별합니다.
+이전 v5 사용법은 [v5 한국어 사용설명서](docs/operations/README_V5_KO.md), 당시 시험 범위는 [v5 검증 보고서](validation/test-records/v5/REPORT_KO.md)에 보존합니다.
 
-이 노트북에 설치한 사본은 `RUN.cmd`로 실행합니다. 다른 PC는 Python 3.14에서 `SETUP.cmd`를 먼저 실행하세요. `requirements-v45-tested.txt`는 이 버전을 검사한 환경입니다. 독립 EXE 배포본은 아닙니다.
+검정 칩·가장자리 색 표시·안쪽 스티커를 사용하는 연구용 프로그램입니다. 영상을 넣으면 구간과 개수를 자동으로 찾고 계측 결과를 저장합니다. 자동 추정과 사람 확인을 구분하며, 불확실한 충돌·표식·이탈은 검토 목록에 남깁니다.
 
-아래의 원본 v4 구조 소개는 계승한 기능 설명입니다. 과거 테스트 결과는 v4.5 시험과 혼동하지 마세요.
+이 노트북에 설치한 사본은 `RUN.cmd`로 실행합니다. 다른 PC는 Python 3.14에서 `SETUP.cmd`를 먼저 실행하세요. 설치 의존성은 `requirements-lock.txt`가 참조하는 `requirements-v5-tested.txt`를 유지합니다. v6 소프트웨어 검증은 Windows CPython 3.14.7에서 수행했습니다. 독립 EXE 배포본은 아닙니다.
+
+아래 원본 v4 구조 소개는 계승한 기능 설명입니다. 현재 동작·검증 범위는 위 v6 문서를 우선합니다.
 
 포커칩의 영상 궤적을 계측하고, 자유운동 마찰과 두 원판 충돌 전후 운동을 분석하기 위한 연구용 Python 패키지다. 원본 v4.0.0 배포본과 전체 검증 산출물은 동결 보관하고, 루트에는 현재 코드와 연구 판단에 필요한 최소 증거만 유지한다.
 
 새 연구자나 AI는 먼저 [AGENTS.md](AGENTS.md)와 [프로젝트 맥락 색인](docs/CONTEXT_INDEX_KO.md)을 읽는다. 현재 완료 상태와 바로 다음 권장 작업은 [CURRENT_STATE_KO.md](docs/development/CURRENT_STATE_KO.md)에 있다.
+
+기존 전체 198개 시험 통과 기록을 보존하며 이번 GitHub 업로드 직전 시험·빌드·GUI·CLI 실행은 사용자 요청으로 생략했습니다. 10영상 결과와 고정 계수 비교의 잠정 상태는 [업로드 기록](validation/test-records/v6/PUBLICATION_20261007_KO.md)을 보세요. 독립 물리 정확도는 미검증입니다.
 
 ## 현재 지원 기능
 

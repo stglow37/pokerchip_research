@@ -6,6 +6,7 @@ from ..core.storage import Records,atomic_json
 from ..analysis.kinematics import event_barriers
 from .fitting import fit_free
 from .physics.farkas import propagate
+from ..core.observation_policy import usable, warning_audit
 
 def preview(run,config,experiment):
     out=Path(run)/'export';result={'status':'exploratory_not_validated','free_motion':[],
@@ -19,8 +20,7 @@ def preview(run,config,experiment):
     for key in experiment['participating_chip_ids']:
         barriers=event_barriers(events,key)
         selected=[r for r in allrows if r['chip_id']==key and r.get('speed_m_s',0) is not None and r.get('speed_m_s',0)>.08
-            and r.get('omega_rad_s') is not None and r.get('world_center_m') is not None and r.get('status')=='observed'
-            and not r.get('assignment_ambiguous') and not r.get('measurement_warning')
+            and r.get('omega_rad_s') is not None and r.get('fit_enabled',True) and usable(r,orientation=True)
             and not any(a<=r['frame_index']<=b for a,b in barriers)]
         segments=[]
         for r in selected:
@@ -31,7 +31,10 @@ def preview(run,config,experiment):
         body=Body.from_chip(next(c for c in config['chips'] if c['id']==key));first=seg[0]
         times=np.array([r['physical_time_s'] for r in seg]);angles=np.unwrap([r['theta_wrapped_rad'] for r in seg])
         bound=config['analysis'].get('omega_bound_rad_s')
-        if bound is None or np.max(np.diff(times))*bound>=np.pi:continue
+        dt=np.diff(times)
+        if bound is None or np.any(dt<=0) or np.max(dt)*bound>=np.pi or np.any(abs(np.diff(angles))>dt*bound+.05):
+            result['free_motion'].append({'chip_id':key,'status':'not_computed','reason':'실제 시간 중복/역행 또는 회전 alias'})
+            continue
         tr=dict(id=key,session_id=experiment['session_id'],source='direct_observations',time_status=config['time_profile']['status'],geometry_status=config['calibration']['status'],
             body={'mass':body.mass,'radius':body.radius,'inertia':body.inertia,'id':key},times=times.tolist(),
             position_angle=[r['world_center_m']+[float(a)] for r,a in zip(seg,angles)],sigma=[.0005,.0005,.035],
@@ -40,7 +43,7 @@ def preview(run,config,experiment):
             fit=fit_free([tr],starts=(.28,),max_nfev=45,exploratory=True)
             prediction=propagate(fit['initial_states'][key],body,fit['parameters']['mu_bottom'],times-times[0])
             observed=np.array(tr['position_angle']);delta=prediction[:,[0,1,4]]-observed
-            record=dict(chip_id=key,status='exploratory_fit' if fit['optimizer_success'] else 'optimizer_not_converged',
+            record=dict(**warning_audit(seg),chip_id=key,status='exploratory_fit' if fit['optimizer_success'] else 'optimizer_not_converged',
                 frames=[seg[0]['frame_index'],seg[-1]['frame_index']],mu_bottom=fit['parameters']['mu_bottom'],
                 position_fit_rmse_m=float(np.sqrt(np.mean(np.sum(delta[:,:2]**2,axis=1)))),angle_fit_rmse_rad=float(np.sqrt(np.mean(delta[:,2]**2))),
                 weighting='fixed exploratory 0.5mm / 0.035rad; not calibrated uncertainty',fit=fit)

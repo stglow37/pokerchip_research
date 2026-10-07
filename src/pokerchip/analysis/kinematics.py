@@ -4,6 +4,7 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 from ..measurement.calibration import to_world
 from ..measurement.vision import wrap
+from ..core.observation_policy import usable, warnings, warning_audit
 
 
 def local_polynomial(times, values, sigma, target, degree=2):
@@ -13,13 +14,14 @@ def local_polynomial(times, values, sigma, target, degree=2):
     if one:
         y=y[:,None]
     sigma=np.broadcast_to(np.asarray(sigma,float).reshape(-1,1),y.shape)
-    if len(t)<degree+1 or np.any(np.diff(t)<=0) or np.any(sigma<=0):
+    if len(t)<degree+1 or np.any(np.diff(t)<=0) or np.any(sigma<=0) or not all(np.isfinite(v).all() for v in (t,y,sigma)):
         raise ValueError("국소 적합에는 고유 증가 timestamp와 양의 sigma가 필요")
     scale=max(float(np.max(abs(t))),1e-9)
     A=np.vander(t/scale,degree+1,increasing=True)
     coeff=[]; uncertainties=[]
     for column in range(y.shape[1]):
         B=A/sigma[:,column,None]
+        if np.linalg.matrix_rank(B)<degree+1:raise ValueError('국소 적합의 수치적 특이성')
         beta=np.linalg.lstsq(B,y[:,column]/sigma[:,column],rcond=None)[0]
         residual=(A@beta-y[:,column])/sigma[:,column]
         cov=np.linalg.pinv(B.T@B)*max(1.,sum(residual**2)/max(1,len(t)-degree-1))
@@ -49,6 +51,9 @@ def apply_corrections(row, edits, calibration, chips):
                 previous_warning=out.get("measurement_warning")
                 out["raw_center_px"]=value["point_px"]
                 if value.get("radius_px") is not None:out["radius_px"]=float(value["radius_px"])
+                # The automatic silhouette belongs to the superseded center.
+                out.pop('projected_boundary_px',None)
+                out['silhouette_model']='manual_pixel_circle'
                 height=next((c.get("thickness_m") for c in chips if c["id"]==out["chip_id"]),None)
                 p=to_world([value["point_px"]],calibration,height)
                 out["world_center_m"]=p[0].tolist() if p is not None else None
@@ -61,6 +66,11 @@ def apply_corrections(row, edits, calibration, chips):
                     probes=to_world([xy+[.01,0],xy+[0,.01]],calibration,height)
                     jac=(probes-p[0]).T/.01
                     cov=np.zeros((3,3));cov[:2,:2]=jac@jac.T*out["manual_sigma_px"]**2
+                    if value.get('radius_px') is not None:
+                        a=np.linspace(0,2*np.pi,72,endpoint=False)
+                        ring=to_world(xy+out['radius_px']*np.column_stack([np.cos(a),np.sin(a)]),calibration,height)
+                        out['radius_m']=float(np.median(np.linalg.norm(ring-p[0],axis=1)))
+                    cov[2,2]=float(np.trace(jac@jac.T)/2*out['manual_sigma_px']**2)
                     out["covariance_world"]=cov.tolist()
                 # A changed center changes every center-relative marker vector.
                 # Preserve the superseded warning for audit, but never present
@@ -157,6 +167,11 @@ def pair_candidates(frame_groups, settings):
                     event["closest_frame"]=frame;event["min_gap"]=float(gap)
         for pair in list(active):
             if pair not in near:
+                # A brief missing observation must not split one impact into
+                # two overlapping events then mislabel it as multi-contact.
+                if (any(k not in current for k in pair) and
+                    frame-active[pair]['frame_end']<=settings.get('candidate_gap_frames',2)):
+                    continue
                 event=active.pop(pair)
                 if event["frame_end"]-event["frame_start"]>settings.get("persistent_frames",8):
                     event["kind"]="persistent_contact"
@@ -183,15 +198,39 @@ def event_barriers(events, chip_id=None, padding=0):
 
 def classify_graph(events, uncertainty_frames=1):
     for i,e in enumerate(events):
+        if e.get("kind")=="noncontact_pass" or e.get("contact_occurrence")=="none":continue
         for f in events[i+1:]:
+            if f.get("kind")=="noncontact_pass" or f.get("contact_occurrence")=="none":continue
             if not set(e["pair"]) & set(f["pair"]):
                 continue
-            overlap=min(e["frame_end"],f["frame_end"])-max(e["frame_start"],f["frame_start"])
+            ea,eb=e.get("contact_frame_interval") or e.get("boundary_frame_interval") or e.get("automatic_boundary_proposal") or [e["frame_start"],e["frame_end"]]
+            fa,fb=f.get("contact_frame_interval") or f.get("boundary_frame_interval") or f.get("automatic_boundary_proposal") or [f["frame_start"],f["frame_end"]]
+            overlap=min(eb,fb)-max(ea,fa)
             if overlap>=-uncertainty_frames:
                 kind="simultaneous_multi_contact" if e["closest_frame"]==f["closest_frame"] else "near_simultaneous"
                 e.update(kind=kind,fit_eligible=False,reason="접촉 그래프 시간 구간 중첩")
                 f.update(kind=kind,fit_eligible=False,reason="접촉 그래프 시간 구간 중첩")
     return events
+
+
+def automatic_impact_gate(event):
+    """Exploratory inclusion; never human approval or a restitution-value filter."""
+    reasons=[]
+    if event.get('kind')!='isolated_binary' or event.get('status')=='excluded':reasons.append('고립 2체 충돌 아님')
+    if not event.get('fit_scope_allowed',True):reasons.append('피팅 제외 구간')
+    boundary=event.get('boundary_frame_interval') or []
+    if len(boundary)!=2 or boundary[1]-boundary[0]>2:reasons.append('충돌 경계가 두 프레임보다 넓음')
+    states=event.get('pre',[])+event.get('post',[])
+    if len(states)!=4 or any(len(s.get('fit_frames',[]))<5 for s in states):reasons.append('연속 전후 위치 표본 부족')
+    if event.get('normal_sigma_rad_approx',float('inf'))>.08:reasons.append('법선 방향 불확실')
+    if event.get('a_m_s',0)<=5*event.get('approach_sigma_m_s',float('inf')):reasons.append('접근 속도 신호 부족')
+    blockers=[]
+    if event.get('kind')!='isolated_binary':blockers.append('현재 모델에서 계산 불가: '+str(event.get('kind')))
+    if event.get('status')=='excluded' or not event.get('fit_scope_allowed',True):blockers.append('사용자가 계수 계산에서 제외')
+    if len(states)!=4 or any(not s.get('position') or not s.get('velocity') for s in states):blockers.append('충돌 전후 상태 누락')
+    if not event.get('normal') or not np.isfinite(event.get('a_m_s',np.nan)) or event.get('a_m_s',0)<=1e-12:blockers.append('유효한 양의 접근 속도 또는 법선 없음')
+    return {'eligible':not blockers,'reasons':blockers,'warnings':reasons,
+            'scope':'automatic_exploratory_not_human_reviewed','version':2}
 
 
 def kinematic_at(row, neighbors, settings, barriers):
@@ -201,12 +240,12 @@ def kinematic_at(row, neighbors, settings, barriers):
             "status":row["status"],"identity_status":row.get("identity_status"),"angle_status":row.get("angle_status"),
             "vx_m_s":None,"vy_m_s":None,"ax_m_s2":None,"ay_m_s2":None,"omega_rad_s":None,"alpha_rad_s2":None,
             "theta_unwrapped_rad":None,"direction_rad":None,"fit_samples":0,"window_s":settings["window_s"],
-            "reason":None,"segment":0}
+            "reason":None,"segment":0,"calculation_status":"not_computed"}
     # Keep measurement exclusions available to downstream fitting. Dropping
     # these flags made blurry/ambiguous positions look eligible again.
     for key in ('measurement_warning','assignment_ambiguous','covariance_world','theta_sigma_rad','surface_status','observable','fit_enabled','scope_reason','scope_segment','position_status','orientation_status'):
         result[key]=row.get(key)
-    if row.get("assignment_ambiguous") or row.get("measurement_warning") or row["status"] in ("missing","low_confidence","outside_interval"):
+    if not usable(row, world=False, time=False):
         result["reason"]="unreliable_target_observation";return result
     if row.get("physical_time_s") is None or row.get("world_center_m") is None:
         result["reason"]="timebase_unverified" if row.get("physical_time_s") is None else "calibration_unverified"
@@ -220,7 +259,7 @@ def kinematic_at(row, neighbors, settings, barriers):
         if a>frame:hi=min(hi,a)
     selected=[r for r in neighbors if lo<r["frame_index"]<hi and r.get("physical_time_s") is not None and
               abs(r["physical_time_s"]-target)<=settings["window_s"]/2 and r.get("world_center_m") is not None and
-              r["status"] not in ("missing","low_confidence","outside_interval") and not r.get("assignment_ambiguous") and not r.get("measurement_warning")]
+              usable(r)]
     # Never smooth across a missing observation, even if the requested time window spans it.
     before=[r for r in selected if r["frame_index"]<=frame];after=[r for r in selected if r["frame_index"]>frame]
     connected=[]
@@ -233,6 +272,7 @@ def kinematic_at(row, neighbors, settings, barriers):
         if r["frame_index"]!=expected:break
         connected.append(r);expected+=1
     selected=connected
+    result.update(warning_audit(selected))
     result["segment"]=lo+1
     if len(selected)<settings["min_samples"]:
         result["reason"]="insufficient_contiguous_samples";return result
@@ -240,25 +280,37 @@ def kinematic_at(row, neighbors, settings, barriers):
     if np.any(np.diff(t)<=0):
         result["reason"]="nonmonotonic_time";return result
     sigma=[max(1e-6,np.sqrt(np.trace(np.array(r.get("covariance_world") or np.eye(3)*1e-8)[:2,:2])/2)) for r in selected]
-    beta,se=local_polynomial(t,[r["world_center_m"] for r in selected],sigma,target)
+    try:beta,se=local_polynomial(t,[r["world_center_m"] for r in selected],sigma,target)
+    except (ValueError,np.linalg.LinAlgError):
+        result['reason']='singular_or_invalid_local_fit';return result
+    result['calculation_status']='computed_with_warnings' if result['uses_warned_observations'] else 'computed'
     result.update(vx_m_s=float(beta[1,0]),vy_m_s=float(beta[1,1]),ax_m_s2=float(beta[2,0]),ay_m_s2=float(beta[2,1]),
                   velocity_sigma_m_s=se[1].tolist(),acceleration_sigma_m_s2=se[2].tolist(),fit_samples=len(t),
                   actual_window_s=float(t[-1]-t[0]),fit_frame_interval=[selected[0]["frame_index"],selected[-1]["frame_index"]])
     if np.linalg.norm(beta[1])>3*np.linalg.norm(se[1]):
         result["direction_rad"]=float(np.arctan2(beta[1,1],beta[1,0]))
     bound=settings.get("omega_bound_rad_s")
-    if any(r.get("theta_wrapped_rad") is None for r in selected):
-        result["angle_status"]="missing_in_window"
-    elif bound is None or np.max(np.diff(t))*bound>=np.pi:
-        result["angle_status"]="alias_ambiguous"
+    angular={r['frame_index']:r for r in selected if usable(r,orientation=True)}
+    left=[];f=frame
+    while f in angular:left.append(angular[f]);f-=1
+    right=[];f=frame+1
+    while f in angular:right.append(angular[f]);f+=1
+    angle_rows=list(reversed(left))+right if frame in angular else []
+    if len(angle_rows)<settings['min_samples']:
+        result['angle_status']='insufficient_contiguous_angle_samples'
     else:
-        angles=np.unwrap([r["theta_wrapped_rad"] for r in selected])
-        if np.any(abs(np.diff(angles))>bound*np.diff(t)+.05):
-            result["angle_status"]="alias_ambiguous"
+        at=np.array([r['physical_time_s'] for r in angle_rows])
+        if bound is None or np.max(np.diff(at))*bound>=np.pi:
+            result['angle_status']='alias_ambiguous'
         else:
-            beta,se=local_polynomial(t,angles,[max(.005,r.get("theta_sigma_rad") or .05) for r in selected],target)
-            result.update(theta_unwrapped_rad=float(beta[0]),omega_rad_s=float(beta[1]),alpha_rad_s2=float(beta[2]),
-                          omega_sigma_rad_s=float(se[1]),angle_status="unwrap_conditional_on_speed_bound")
+            angles=np.unwrap([r['theta_wrapped_rad'] for r in angle_rows])
+            if np.any(abs(np.diff(angles))>bound*np.diff(at)+.05):result['angle_status']='alias_ambiguous'
+            else:
+                ab,ase=local_polynomial(at,angles,[max(.005,r.get('theta_sigma_rad') or .05) for r in angle_rows],target)
+                result['angle_warning_audit']=warning_audit(angle_rows)
+                result.update(theta_unwrapped_rad=float(ab[0]),omega_rad_s=float(ab[1]),alpha_rad_s2=float(ab[2]),
+                    omega_sigma_rad_s=float(ase[1]),angle_status='unwrap_conditional_on_speed_bound',
+                    angle_fit_frame_interval=[angle_rows[0]['frame_index'],angle_rows[-1]['frame_index']],angle_fit_samples=len(angle_rows))
     return result
 
 
@@ -277,35 +329,53 @@ def continuous_angle(result, previous):
 
 
 def suggest_boundary(event,get_rows):
-    """Position-only change point proposal; the operator still approves the event.
+    """Image-position change point with continuous, piecewise-linear paths.
 
-    Compare two straight short windows with one straight window. Restrict to
-    continuous clear observations so an occlusion cannot masquerade as an impulse.
+    Only a contiguous suffix/prefix is used; an earlier gap does not push the
+    proposed impact into the post-impact motion. No Farkas/IFR coefficients.
+    Near-equal candidates are reported as a bracket, not false frame precision.
     """
     series=[]
     for chip in event['pair']:
         rr=[r for r in get_rows(chip,max(0,event['frame_start']-8),event['frame_end']+8)
             if r.get('world_center_m') is not None and r.get('physical_time_s') is not None
-            and r.get('status')=='observed' and not r.get('assignment_ambiguous') and not r.get('measurement_warning')]
+            and usable(r)]
         series.append(rr)
-    best=None
-    def error(rr):
-        t=np.array([r['physical_time_s'] for r in rr]);t-=t[0]
-        a=np.column_stack([np.ones(len(t)),t]);xy=np.array([r['world_center_m'] for r in rr])
-        return float(np.sum((xy-a@np.linalg.lstsq(a,xy,rcond=None)[0])**2))
+    scores=[]
     for f in range(event['frame_start'],event['frame_end']):
-        cost=baseline=0.;valid=True
+        windows=[]
         for rr in series:
-            left=[r for r in rr if r['frame_index']<=f][-8:];right=[r for r in rr if r['frame_index']>f][:8]
-            if len(left)<5 or len(right)<5 or left[-1]['frame_index']!=f or right[0]['frame_index']!=f+1:
-                valid=False;break
-            whole=left+right
-            if any(b['frame_index']!=a['frame_index']+1 for a,b in zip(whole,whole[1:])):valid=False;break
-            cost+=error(left)+error(right);baseline+=error(whole)
-        if valid and baseline>1e-8 and cost<baseline*.4:
-            score=cost/max(1,len(series))
-            if best is None or score<best[0]:best=(score,f)
-    return [best[1],best[1]+1] if best else None
+            byframe={r['frame_index']:r for r in rr};left=[];right=[]
+            for k in range(f,f-8,-1):
+                if k not in byframe:break
+                left.append(byframe[k])
+            left.reverse()
+            for k in range(f+1,f+9):
+                if k not in byframe:break
+                right.append(byframe[k])
+            if len(left)<5 or len(right)<5:break
+            windows.append((left,right))
+        if len(windows)!=len(series):continue
+        alternatives=[]
+        for fraction in (0.,.1,.3,.5,.7,.9,1.):
+            cost=baseline=0.
+            for left,right in windows:
+                tc=(1-fraction)*left[-1]['physical_time_s']+fraction*right[0]['physical_time_s']
+                whole=left+right;t=np.array([r['physical_time_s']-tc for r in whole])
+                xy=np.array([r['world_center_m'] for r in whole])
+                linear=np.column_stack([np.ones(len(t)),t])
+                broken=np.column_stack([linear,np.maximum(t,0)])
+                baseline+=float(np.mean((xy-linear@np.linalg.lstsq(linear,xy,rcond=None)[0])**2))
+                cost+=float(np.mean((xy-broken@np.linalg.lstsq(broken,xy,rcond=None)[0])**2))
+            if baseline>1e-9 and cost<baseline*.4:alternatives.append(cost)
+        if alternatives:scores.append((min(alternatives),f))
+    if not scores:return None
+    best=min(s[0] for s in scores)
+    if best<1e-18:
+        # A noiseless kink exactly on a sample can belong to either side.
+        f=min(scores)[1];return [f,f+1]
+    similar=[f for score,f in scores if score<=best*1.05+1e-10]
+    return [min(similar),max(similar)+1]
 
 
 def refine_event(event, get_rows, settings, chips):
@@ -317,7 +387,7 @@ def refine_event(event, get_rows, settings, chips):
         quiet=False
         for key in event['pair']:
             rr=[r for r in get_rows(key,max(0,event['frame_start']-10),event['frame_end']+10)
-                if r.get('world_center_m') is not None and r.get('status')=='observed' and not r.get('assignment_ambiguous') and not r.get('measurement_warning')]
+                if usable(r,time=False)]
             before=[r for r in rr if r['frame_index']<event['frame_start']]
             after=[r for r in rr if r['frame_index']>event['frame_end']]
             if len(before)>=5 and len(after)>=5:
@@ -330,7 +400,7 @@ def refine_event(event, get_rows, settings, chips):
     if event["kind"] in ("simultaneous_multi_contact","near_simultaneous","persistent_contact","out_of_plane_suspected"):
         return event
     frame=event["closest_frame"]
-    explicit=event.get("contact_frame_interval")
+    explicit=event.get("contact_frame_interval") or event.get("automatic_boundary_proposal")
     if not explicit and event.get('contact_occurrence')!='none':
         explicit=suggest_boundary(event,get_rows)
         if explicit:event={**event,'automatic_boundary_proposal':explicit,'boundary_proposal_method':'clear_position_change_point_requires_review'}
@@ -340,7 +410,7 @@ def refine_event(event, get_rows, settings, chips):
     sides=[]; bounds=[]
     for chip in event["pair"]:
         rows=list(get_rows(chip,max(0,event["frame_start"]-settings["max_window_samples"]),event["frame_end"]+settings["max_window_samples"]))
-        valid=[r for r in rows if r.get("physical_time_s") is not None and r.get("world_center_m") is not None and r["status"] not in ("missing","low_confidence","outside_interval") and not r.get("assignment_ambiguous") and not r.get("measurement_warning")]
+        valid=[r for r in rows if usable(r)]
         before=[r for r in valid if r["frame_index"]<=pre_end and not any(a<=r["frame_index"]<=b for a,b in unusable)]
         after=[r for r in valid if r["frame_index"]>=post_start and not any(a<=r["frame_index"]<=b for a,b in unusable)]
         if len(before)<3 or len(after)<3:
@@ -379,18 +449,24 @@ def refine_event(event, get_rows, settings, chips):
     for before,after in sides:
         for rows,destination in [(before,pre),(after,post)]:
             beta,se=sidefit(rows,tc)
-            angles=[r.get("theta_wrapped_rad") for r in rows]
+            angle_rows=[]
+            iterator=reversed(rows) if destination is pre else iter(rows)
+            for r in iterator:
+                if not usable(r,orientation=True):break
+                angle_rows.append(r)
+            if destination is pre:angle_rows.reverse()
+            angles=[r.get("theta_wrapped_rad") for r in angle_rows]
             omega=None;theta=None;omega_sigma=None
-            ts=np.array([r["physical_time_s"] for r in rows])
+            ts=np.array([r["physical_time_s"] for r in angle_rows])
             bound=settings.get("omega_bound_rad_s")
-            if all(x is not None for x in angles) and bound is not None and np.max(np.diff(ts))*bound<np.pi:
+            if len(angles)>=max(3,settings.get("min_samples",5)) and bound is not None and np.max(np.diff(ts))*bound<np.pi:
                 unwrapped=np.unwrap(angles)
                 if np.all(abs(np.diff(unwrapped))<=bound*np.diff(ts)+.05):
-                    ab,ase=local_polynomial(ts,unwrapped,[max(.005,r.get("theta_sigma_rad") or .03) for r in rows],tc)
+                    ab,ase=local_polynomial(ts,unwrapped,[max(.005,r.get("theta_sigma_rad") or .03) for r in angle_rows],tc)
                     theta=float(ab[0]);omega=float(ab[1]);omega_sigma=float(ase[1])
-            destination.append({"position":beta[0].tolist(),"velocity":beta[1].tolist(),"theta":theta,"omega":omega,
+            destination.append({**warning_audit(rows),"position":beta[0].tolist(),"velocity":beta[1].tolist(),"theta":theta,"omega":omega,
                                 "position_sigma":se[0].tolist(),"velocity_sigma":se[1].tolist(),"omega_sigma":omega_sigma,
-                                "fit_frames":[r["frame_index"] for r in rows]})
+                                "fit_frames":[r["frame_index"] for r in rows],"angle_fit_frames":[r["frame_index"] for r in angle_rows]})
             uncert.append(se[0])
     d=np.array(pre[1]["position"])-pre[0]["position"];distance=np.linalg.norm(d)
     if distance<1e-10:return {**event,"kind":"invalid","reason":"추정 중심 중첩"}
@@ -403,11 +479,17 @@ def refine_event(event, get_rows, settings, chips):
     c=float(rel@t+sum(p["radius_m"]*s["omega"] for p,s in zip(props,pre))) if all(s["omega"] is not None for s in pre) else None
     cp=float(after_rel@t+sum(p["radius_m"]*s["omega"] for p,s in zip(props,post))) if all(s["omega"] is not None for s in post) else None
     sigma_a=float(np.sqrt(sum(np.sum((np.asarray(v["velocity_sigma"])*n)**2) for v in pre)))
-    eligible=a>max(1e-5,3*sigma_a) and abs(distance-radius)<4*sigma_g and float(after_rel@n)<=3*sigma_a
+    eligible=a>1e-12 and np.isfinite(a)
+    event_warnings=[]
+    if a<=max(1e-5,3*sigma_a):event_warnings.append('weak_approach_signal')
+    if abs(distance-radius)>=4*sigma_g:event_warnings.append('uncertain_contact_geometry')
+    if float(after_rel@n)>3*sigma_a:event_warnings.append('post_state_not_separating')
     pre_intervals=[[side[0][0]["frame_index"],side[0][-1]["frame_index"]] for side in sides]
     post_intervals=[[side[1][0]["frame_index"],side[1][-1]["frame_index"]] for side in sides]
     boundary=[max(x[1] for x in pre_intervals),min(x[0] for x in post_intervals)]
-    return {**event,"time_s":tc,"time_interval_s":[max(left,tc-2*sigma_t),min(right,tc+2*sigma_t)],
+    audit=warning_audit([r for side in sides for rows in side for r in rows])
+    audit['calculation_warnings']=sorted(set(audit['calculation_warnings']+event_warnings))
+    return {**event,**audit,"time_s":tc,"time_interval_s":[max(left,tc-2*sigma_t),min(right,tc+2*sigma_t)],
             "time_sigma_s":sigma_t,"time_method":"one_sided_position_continuity_and_contact_minimization",
             "candidate_frame_interval":event.get("candidate_frame_interval",[event["frame_start"],event["frame_end"]]),
             "boundary_frame_interval":boundary,"pre_fit_frame_intervals":pre_intervals,"post_fit_frame_intervals":post_intervals,
@@ -418,7 +500,7 @@ def refine_event(event, get_rows, settings, chips):
             "status":"review_required","reason":"사건 승인 필요" if eligible else "grazing/접촉 기하 불확실",
             "normal":n.tolist(),"tangent":t.tolist(),"contact_point_m":(np.array(pre[0]["position"])+props[0]["radius_m"]*n).tolist(),
             "pre":pre,"post":post,"approach_sigma_m_s":sigma_a,"a_m_s":a,"c_m_s":c,"c_after_m_s":cp,
-            "e_n_obs":float(-after_rel@n/a) if eligible and abs(a)>1e-5 else None,"e_t_obs":-cp/c if eligible and c is not None and cp is not None and abs(c)>1e-5 else None,
+            "e_n_obs":float(-after_rel@n/a) if eligible else None,"e_t_obs":-cp/c if eligible and c is not None and cp is not None and abs(c)>1e-12 else None,
             "impact_parameter_m":float((d[0]*rel[1]-d[1]*rel[0])/np.linalg.norm(rel)) if np.linalg.norm(rel)>1e-6 else None,
             "impact_parameter_reference":"pre_state_at_estimated_tc", "incidence_rad":float(np.arctan2(rel@t,a)),
             "impact_parameter_normalized":float((d[0]*rel[1]-d[1]*rel[0])/np.linalg.norm(rel)/radius) if np.linalg.norm(rel)>1e-6 else None,

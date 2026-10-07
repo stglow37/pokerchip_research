@@ -23,7 +23,9 @@ def free_trial(run,chip_id,start,end):
     if len(rows)<6 or len(rows)>5000:raise ValueError("자유운동 구간은 6..5000 관측 표본")
     first=next((r for r in rows if r.get("vx_m_s") is not None and r.get("omega_rad_s") is not None),None)
     if first is None:raise ValueError("검증된 위치·속도·회전·시간 및 alias 상한이 필요합니다.")
-    observations=[r for r in observations if r["frame_index"]>=first["frame_index"] and r.get("physical_time_s") is not None and r.get("world_center_m") is not None and r.get("theta_wrapped_rad") is not None and r["status"] not in ("missing","low_confidence") and not r.get("assignment_ambiguous") and not r.get("measurement_warning")]
+    from ..core.observation_policy import usable,warning_audit
+    observations=[r for r in observations if r["frame_index"]>=first["frame_index"]
+                  and r.get("fit_enabled",True) and usable(r,orientation=True)]
     if len(observations)<6:raise ValueError("직접 위치/각도 관측 부족")
     if any(b["frame_index"]!=a["frame_index"]+1 for a,b in zip(observations,observations[1:])):raise ValueError("결측을 가로지르는 회전 피팅 금지: 연속 구간을 선택하세요.")
     angles=np.unwrap([r["theta_wrapped_rad"] for r in observations])
@@ -32,7 +34,7 @@ def free_trial(run,chip_id,start,end):
     if bound is None or np.any(dt<=0) or np.any(dt*bound>=np.pi) or np.any(abs(np.diff(angles))>dt*bound+.05):
         raise ValueError("선택 자유운동 구간의 회전 alias 상한 검증 실패")
     sigma=np.array([[max(1e-6,np.sqrt(np.array(r.get("covariance_world") or np.eye(3)*1e-8)[j,j])) for j in (0,1)]+[max(.005,r.get("theta_sigma_rad") or .05)] for r in observations])
-    return {"id":exp["id"]+f"_{chip_id}_{start}_{end}","session_id":exp["session_id"],"source":"reviewed_observations",
+    return {**warning_audit(observations),"id":exp["id"]+f"_{chip_id}_{start}_{end}","session_id":exp["session_id"],"source":"reviewed_observations",
             "source_run":run.name,"time_status":cfg["time_profile"]["status"],"geometry_status":cfg["calibration"]["status"],
             "body":properties(chip),"times":[r["physical_time_s"] for r in observations],
             "position_angle":[r["world_center_m"]+[float(a)] for r,a in zip(observations,angles)],
@@ -47,13 +49,16 @@ def impact_trials(run):
     with Records(run/"records.sqlite") as db:events=list(db.rows("events"))
     result=[]
     for event in events:
-        if not event.get("fit_eligible"):continue
+        from .study import impact_included
+        if not impact_included(exp,event):continue
         if any(s.get("omega") is None for side in ("pre","post") for s in event[side]):continue
         bodies=[properties(next(c for c in cfg["chips"] if c["id"]==key)) for key in event["pair"]]
         states={side:[s["position"]+s["velocity"]+[s["theta"],s["omega"]] for s in event[side]] for side in ("pre","post")}
-        result.append({"id":exp["id"]+"_"+event["id"],"session_id":exp["session_id"],"source":"reviewed_observations","source_run":run.name,
+        result.append({"calculation_warnings":event.get('calculation_warnings',[]),"warning_observation_refs":event.get('warning_observation_refs',[]),
+                       "review_scope":"human_reviewed" if event.get('fit_eligible') else 'automatic_exploratory',
+                       "id":exp["id"]+"_"+event["id"],"session_id":exp["session_id"],"source":"reviewed_observations" if event.get('fit_eligible') else 'direct_observations',"source_run":run.name,
                        "time_status":cfg["time_profile"]["status"],"geometry_status":cfg["calibration"]["status"],"kind":"isolated_binary",
-                       "approved":True,"normal":event["normal"],"bodies":bodies,**states,
+                       "approved":bool(event.get('fit_eligible')),"calculation_eligible":True,"normal":event["normal"],"bodies":bodies,**states,
                        "pre_sigma":[s["velocity_sigma"]+[max(1e-6,s.get("omega_sigma") or 1.)] for s in event["pre"]],
                        "post_sigma":[s["velocity_sigma"]+[max(1e-6,s.get("omega_sigma") or 1.)] for s in event["post"]],
                        "normal_sigma":max(1e-6,float(np.sqrt(sum(np.sum(np.square(s["velocity_sigma"])) for s in event["pre"])))),
@@ -83,7 +88,8 @@ def compare_forward(run,parameters,start_frame=None,end_frame=None):
     observed=np.array([[r[k]["world_center_m"]+[r[k]["vx_m_s"],r[k]["vy_m_s"],r[k]["theta_wrapped_rad"],r[k]["omega_rad_s"]] for k in ids] for _,r in complete])
     n=len(simulation["states"]);pred=simulation["states"]
     scores={key:metrics(observed[:n,:,columns],pred[:,:,columns],kind="full_forward") for key,columns in (("position_m",[0,1]),("velocity_m_s",[2,3]),("omega_rad_s",[5]))} if n else {}
-    result={"prediction_kind":"full_forward","initial_source":"first_common_observed_state","source_run":run.name,
+    from ..core.observation_policy import warning_audit
+    result={**warning_audit([r for _,frame in complete for r in frame.values()]),"prediction_kind":"full_forward","initial_source":"first_common_observed_state","source_run":run.name,
             "initial_frame":complete[0][0],"parameters":parameters,"simulation":simulation,"metrics":scores}
     atomic_json(run/"export/forward_comparison.json",result)
     if n:

@@ -1,0 +1,26 @@
+{
+  "scope": "training_video_subset_sensitivity_not_independent_accuracy",
+  "one_chip_videos_only": {
+    "training_videos": [
+      "C004_20261001_191533.mp4",
+      "C004_20261001_191914.mp4"
+    ],
+    "parameters": {
+      "mu_bottom": 0.18865268507829813
+    },
+    "free_trials": 2
+  },
+  "four_training_videos": {
+    "training_videos": [
+      "C004_20261001_191533.mp4",
+      "C004_20261001_191914.mp4",
+      "C005_20261001_193154.mp4",
+      "C005_20261001_193708.mp4"
+    ],
+    "parameters": {
+      "mu_bottom": 0.2586651372024384,
+      "e_normal": 0.7541381086716763
+    },
+    "free_trials": 6
+  }
+}

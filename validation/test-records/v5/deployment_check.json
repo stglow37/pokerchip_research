@@ -1,0 +1,75 @@
+{
+  "version": "5.0.0",
+  "source_import": "D:\\내 파일\\학교\\2026_1학년 2학기\\창의 R&E\\시뮬레이션\\PokerChip_Astra_v5\\src\\pokerchip\\__init__.py",
+  "videos": [
+    {
+      "video": "C004_20261001_191533.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C004_20261001_191914.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C005_20261001_193154.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C005_20261001_193708.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C006_20261001_195730.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C006_20261001_195938.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C007_20261001_204700.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C007_20261001_205140.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C001-원판01개-E004_20260928_192442.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C002-원판02개-E008_20260928_200214.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    },
+    {
+      "video": "C003-원판03개-E052_20260928_204052.mp4",
+      "hash_matches": true,
+      "analysis_fresh": true,
+      "export_fresh": true
+    }
+  ],
+  "constant_bank_verified": true,
+  "actual_gui_entry_point": "opened_and_closed_successfully",
+  "qt_platform": "offscreen"
+}

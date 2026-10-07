@@ -1,0 +1,236 @@
+[
+  {
+    "video": "C005_20261001_193154.mp4",
+    "id": "contact_fa1905ac5371e0ea1ce0",
+    "pair": [
+      "chip_1",
+      "chip_2"
+    ],
+    "kind": "isolated_binary",
+    "status": "review_required",
+    "automatic_boundary_proposal": [
+      253,
+      254
+    ],
+    "contact_frame_interval": null,
+    "boundary_frame_interval": [
+      253,
+      254
+    ],
+    "automatic_fit_gate": {
+      "eligible": true,
+      "reasons": [],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": 0.7549315065706284
+  },
+  {
+    "video": "C005_20261001_193708.mp4",
+    "id": "contact_d588f02d7eb2d1946062",
+    "pair": [
+      "chip_1",
+      "chip_2"
+    ],
+    "kind": "isolated_binary",
+    "status": "review_required",
+    "automatic_boundary_proposal": [
+      354,
+      356
+    ],
+    "contact_frame_interval": null,
+    "boundary_frame_interval": [
+      354,
+      356
+    ],
+    "automatic_fit_gate": {
+      "eligible": true,
+      "reasons": [],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": 0.7511068967106797
+  },
+  {
+    "video": "C006_20261001_195730.mp4",
+    "id": "contact_c0494c4df51a456be719",
+    "pair": [
+      "chip_1",
+      "chip_2"
+    ],
+    "kind": "isolated_binary",
+    "status": "review_required",
+    "automatic_boundary_proposal": [
+      379,
+      380
+    ],
+    "contact_frame_interval": null,
+    "boundary_frame_interval": [
+      379,
+      380
+    ],
+    "automatic_fit_gate": {
+      "eligible": true,
+      "reasons": [],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": 0.8951608866544821
+  },
+  {
+    "video": "C006_20261001_195730.mp4",
+    "id": "contact_4b652416d6ad491b54d8",
+    "pair": [
+      "chip_2",
+      "chip_3"
+    ],
+    "kind": "isolated_binary",
+    "status": "review_required",
+    "automatic_boundary_proposal": [
+      385,
+      386
+    ],
+    "contact_frame_interval": null,
+    "boundary_frame_interval": [
+      385,
+      386
+    ],
+    "automatic_fit_gate": {
+      "eligible": true,
+      "reasons": [],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": 0.4843534082060815
+  },
+  {
+    "video": "C006_20261001_195938.mp4",
+    "id": "contact_ec2c1c578da612a00655",
+    "pair": [
+      "chip_1",
+      "chip_2"
+    ],
+    "kind": "near_simultaneous",
+    "status": "review_required",
+    "automatic_boundary_proposal": null,
+    "contact_frame_interval": null,
+    "boundary_frame_interval": null,
+    "automatic_fit_gate": {
+      "eligible": false,
+      "reasons": [
+        "고립 2체 충돌 아님",
+        "충돌 경계가 두 프레임보다 넓음",
+        "연속 전후 위치 표본 부족",
+        "법선 방향 불확실",
+        "접근 속도 신호 부족"
+      ],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": null
+  },
+  {
+    "video": "C006_20261001_195938.mp4",
+    "id": "contact_af40360f98249ef2a330",
+    "pair": [
+      "chip_2",
+      "chip_3"
+    ],
+    "kind": "near_simultaneous",
+    "status": "review_required",
+    "automatic_boundary_proposal": null,
+    "contact_frame_interval": null,
+    "boundary_frame_interval": null,
+    "automatic_fit_gate": {
+      "eligible": false,
+      "reasons": [
+        "고립 2체 충돌 아님",
+        "충돌 경계가 두 프레임보다 넓음",
+        "연속 전후 위치 표본 부족",
+        "법선 방향 불확실",
+        "접근 속도 신호 부족"
+      ],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": null
+  },
+  {
+    "video": "C002-원판02개-E008_20260928_200214.mp4",
+    "id": "contact_bb0b8518c805e178cf24",
+    "pair": [
+      "chip_1",
+      "chip_2"
+    ],
+    "kind": "isolated_binary",
+    "status": "review_required",
+    "automatic_boundary_proposal": [
+      47,
+      48
+    ],
+    "contact_frame_interval": null,
+    "boundary_frame_interval": [
+      47,
+      48
+    ],
+    "automatic_fit_gate": {
+      "eligible": true,
+      "reasons": [],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": 0.6654376484778641
+  },
+  {
+    "video": "C003-원판03개-E052_20260928_204052.mp4",
+    "id": "contact_626ded353108f5da5293",
+    "pair": [
+      "chip_1",
+      "chip_2"
+    ],
+    "kind": "isolated_binary",
+    "status": "review_required",
+    "automatic_boundary_proposal": [
+      198,
+      199
+    ],
+    "contact_frame_interval": null,
+    "boundary_frame_interval": [
+      198,
+      199
+    ],
+    "automatic_fit_gate": {
+      "eligible": true,
+      "reasons": [],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": 0.637392772078205
+  },
+  {
+    "video": "C003-원판03개-E052_20260928_204052.mp4",
+    "id": "contact_0de2ef1756e969261b28",
+    "pair": [
+      "chip_2",
+      "chip_3"
+    ],
+    "kind": "isolated_binary",
+    "status": "review_required",
+    "automatic_boundary_proposal": [
+      223,
+      224
+    ],
+    "contact_frame_interval": null,
+    "boundary_frame_interval": [
+      223,
+      224
+    ],
+    "automatic_fit_gate": {
+      "eligible": true,
+      "reasons": [],
+      "scope": "automatic_exploratory_not_human_reviewed",
+      "version": 1
+    },
+    "e_n_obs": 0.8792676782037565
+  }
+]

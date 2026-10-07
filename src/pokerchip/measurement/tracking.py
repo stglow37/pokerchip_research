@@ -24,6 +24,11 @@ class Tracker:
         return result
 
     def update(self, frame, detections):
+        def gate(track):
+            # Unobserved frames widen association uncertainty. This does not
+            # manufacture observations or relax circle/marker quality gates.
+            dt=max(1,frame-track['last_frame']);base=self.settings['assignment_gate_px']
+            return min(base*np.sqrt(dt),base+3*track['radius'])
         painted=self.settings.get('identity_mode')=='painted_tracks'
         if painted:
             # A hand at the board edge can fit a circle and contain one red
@@ -57,12 +62,12 @@ class Tracker:
                 pred=np.array(tr["position"])+dt*np.array(tr["velocity_px_frame"])
                 for b,d in enumerate(detections):
                     distance=np.linalg.norm(pred-d["raw_center_px"])
-                    if distance<self.settings["assignment_gate_px"] and not (k in self.participating and evidence[b] and k!=evidence[b]):
+                    if distance<gate(tr) and not (k in self.participating and evidence[b] and k!=evidence[b]):
                         costs[a,b]=distance + (0 if evidence[b]==k else 8)
             # Private dummy columns allow every track to be unmatched. Without
             # them a rectangular assignment can force an implausible real match.
             extended=np.column_stack([costs,np.full((len(keys),len(keys)),1e6)])
-            for a in range(len(keys)):extended[a,len(detections)+a]=self.settings["assignment_gate_px"]+8
+            for a in range(len(keys)):extended[a,len(detections)+a]=gate(self.tracks[keys[a]])+8
             aa,bb=linear_sum_assignment(extended)
             optimum=float(extended[aa,bb].sum())
             for a,b in zip(aa,bb):
@@ -82,7 +87,7 @@ class Tracker:
             if identified and identified in self.tracks:
                 old=self.tracks[identified];dt=frame-old['last_frame']
                 expected=np.array(old['position'])+dt*np.array(old['velocity_px_frame'])
-                if dt<=self.settings['max_gap_frames'] and np.linalg.norm(expected-d['raw_center_px'])>self.settings['assignment_gate_px']:
+                if dt<=self.settings['max_gap_frames'] and np.linalg.norm(expected-d['raw_center_px'])>gate(old):
                     identified=None;assigned=None;ambiguous=True
             if ambiguous and not identified:
                 # Do not move a trusted trajectory into an ambiguous detection.
@@ -95,7 +100,13 @@ class Tracker:
                 rim_only=[k for k,f in d['markers'].items() if k not in self.claimed and f.get('identity_eligible',True) and f.get('rim') and not f.get('rim_ambiguous')]
                 if generic:assigned=generic[0]
                 elif len(rim_only)==1 and d.get('surface_status')=='inside_floor' and not ambiguous:assigned=rim_only[0]
-                else:continue
+                else:
+                    available=[k for k in self.participating if k not in self.claimed]
+                    if (available and not ambiguous and d.get('status')=='observed' and
+                        d.get('surface_status')=='inside_floor' and d.get('dark_face_contrast',0)>20 and
+                        d.get('visible_arc_fraction',0)>=.9):
+                        assigned=available[0]  # position track only; physical color identity remains unverified
+                    else:continue
                 self.claimed.add(assigned)
             if identified and identified not in used:
                 if assigned and assigned.startswith("unknown"):

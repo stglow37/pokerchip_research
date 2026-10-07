@@ -1,0 +1,12 @@
+{
+  "version": "5.0.0",
+  "python": "3.14.6",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "code_hashes": {
+    "measurement": "086c3c36b68a66fa36264faca81481052037dbfff47f26aaff300fb555195b54",
+    "analysis": "bf10ffd28e276c9d64a6c7ea4991c0bb2fff27a52d9953f70779becc7a7cad84",
+    "physics": "2ca4cf04a2b52e95ca2868d40f620902df87a7d9384f3060257c2f72171eee08"
+  },
+  "tests": "167 passed",
+  "scope": "development verification, not certified experimental accuracy"
+}

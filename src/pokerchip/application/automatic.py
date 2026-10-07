@@ -203,7 +203,6 @@ def run_automatic(folder,project,control,progress=None,ids=None):
     from ..measurement.selection import require_start
     from .batch_progress import BatchProgress
     selected=[e for e in p['experiments'] if ids is None or e['id'] in ids]
-    for e in selected: require_start(p,e)
     reporter=BatchProgress(emit,len(selected))
     if setup.get('calibration_video'):
         source=Path(setup['calibration_video'])
@@ -229,6 +228,11 @@ def run_automatic(folder,project,control,progress=None,ids=None):
         try:
             control.check()
             source=source_path(folder,e)
+            if e.get('start_selection',{}).get('method')!='human_release_frame':
+                from .interval_proposal import propose_interval,apply_automatic
+                reporter.begin(video_index,e,metadata(source).get('estimated_frames') or 0)
+                proposal=propose_interval(source,p,e,folder,control,reporter.emit)
+                apply_automatic(e,proposal)
             require_start(p,e,file_hash(source))
             reporter.begin(video_index,e,metadata(source).get('estimated_frames') or 0)
             video_emit=reporter.emit
@@ -275,7 +279,7 @@ def run_automatic(folder,project,control,progress=None,ids=None):
             e.setdefault('analysis',copy.deepcopy(p['analysis']))
             e['analysis'].update(scene_settings)
             if e.get('quick_workflow',True):
-                e['analysis'].update(identity_mode='painted_tracks',redetect_every=1,edge_relative_limit=.065,collision_fit_degree=1,max_candidates=max(12,len(e['participating_chip_ids'])*2),
+                e['analysis'].update(identity_mode='painted_tracks',redetect_every=1,edge_relative_limit=.04,collision_fit_degree=2,max_candidates=max(12,len(e['participating_chip_ids'])*2),
                     omega_bound_rad_s=setup.get('omega_bound_rad_s',500.))
             result=analyze(folder,p,e,control,video_emit)
             e.update(status='complete',last_run=str(Path(result['run']).relative_to(folder)),source_hash=result['source_hash'])

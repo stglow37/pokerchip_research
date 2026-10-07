@@ -1,7 +1,21 @@
+<!-- V6 IMPLEMENTATION -->
+# 현재 v6.0.0 안내
+
+v6.0.0 구현·인수 근거는 `docs/development/V6_REQUIREMENTS_KO.md`, `validation/test-records/v6/REPORT_KO.md`, 현재 사용법은 `docs/operations/README_V6_KO.md`다. Windows CPython 3.14.7에서 전체 198개 시험을 통과했다. 독립 물리 정확도는 별도 연구 과제다. 아래 이전 릴리스 원칙을 유지하며 현재 상태/로드맵의 최신 상단을 우선한다.
+
+---
+
+<!-- V5 RELEASE -->
+# 이전 릴리스 v5.0
+
+현재 사용법은 `docs/operations/README_V5_KO.md`, 요구사항 대응은 `docs/development/V5_REQUIREMENTS_KO.md`, 검증 증거는 `validation/test-records/v5/REPORT_KO.md`가 정본이다. 자동 구간은 사람 승인과 구분한다. 아래 v4.5/v4 내용은 계승 원칙과 과거 기록이다.
+
+---
+
 <!-- V45 RELEASE -->
 # 현재 릴리스 안내
 
-현재는 v4.5.0이다. 아래의 ‘126개 / Python 3.13 / Phase 2 다음 작업’은 v4 정리 당시 기준이다. v4.5 릴리스 기록은 142개 통과이며 통합 과정에서 사건 ID·구간 회귀시험 2개가 추가되었다. 현재 기준은 `docs/development/CURRENT_STATE_KO.md`, `docs/operations/TESTING_KO.md`, `validation/test-records/v45/REPORT_KO.md`를 따른다. 기존 원칙과 canonical 구조는 유지한다.
+이 절은 v4.5.0 당시 안내다. 아래의 ‘126개 / Python 3.13 / Phase 2 다음 작업’은 v4 정리 당시 기준이다. v4.5 릴리스 기록은 142개 통과이며 통합 과정에서 사건 ID·구간 회귀시험 2개가 추가되었다. 현재 기준은 `docs/development/CURRENT_STATE_KO.md`, `docs/operations/TESTING_KO.md`, `validation/test-records/v45/REPORT_KO.md`를 따른다. 기존 원칙과 canonical 구조는 유지한다.
 
 ---
 

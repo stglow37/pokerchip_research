@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt,QUrl,QTimer
 from PySide6.QtGui import QColor,QPalette,QDesktopServices
 from PySide6.QtWidgets import (QApplication,QWidget,QVBoxLayout,QHBoxLayout,QGridLayout,QLabel,QPushButton,
     QGroupBox,QTableWidgetItem,QFileDialog,QCheckBox,QSpinBox,QComboBox,QAbstractItemView,QScrollArea,
-    QProgressBar,QDialog,QFormLayout,QMessageBox)
+    QProgressBar,QDialog,QFormLayout,QMessageBox,QPlainTextEdit,QInputDialog)
 from .research_window import MainWindow as ExpertWindow,STYLE as BASE_STYLE,label,table
 from .forms import number,dialog,buttons
 from ..core.config import create_project,register,ensure_chips,save_project
@@ -69,7 +69,7 @@ class MainWindow(ExpertWindow):
     def __init__(self,folder=None):
         light_theme(QApplication.instance());self.quick_control=None;self.quick_running=False;self._last_home_refresh=0.
         super().__init__(None)
-        self.setWindowTitle('포커칩 실험 분석 v4.5');self.resize(1380,940);self.setMinimumSize(1050,720)
+        self.setWindowTitle('포커칩 실험 분석 v6.0');self.resize(1380,940);self.setMinimumSize(1050,720)
         self.setStyleSheet(STYLE);self.nav.setObjectName('navigation');self.nav.setFixedWidth(190)
         self.build_quick();self.build_results()
         self.expert_toggle=QCheckBox('세부 설정·물리 피팅 보기')
@@ -97,13 +97,14 @@ class MainWindow(ExpertWindow):
         scroll=QScrollArea();scroll.setWidgetResizable(True);page=QWidget();scroll.setWidget(page)
         container=QWidget();outer=QVBoxLayout(container);outer.setContentsMargins(0,0,0,0);outer.addWidget(scroll,1)
         self.tabs.addTab(container,'영상 넣기');v=QVBoxLayout(page);v.setSpacing(12)
-        v.addWidget(label('POKERCHIP LAB  /  4.5','eyebrow'))
-        v.addWidget(label('시작 장면을 확인하고, 측정 데이터를 저장하세요.','title'))
+        v.addWidget(label('POKERCHIP LAB  /  6.0','eyebrow'))
+        v.addWidget(label('영상을 넣으면 구간을 찾고, 측정 결과를 저장합니다.','title'))
         v.addWidget(label('검정 칩 · 가장자리 색 표시 한 곳 + 가운데 스티커  |  파일 30 fps → 실제 촬영 240 fps','subtitle'))
         top=QHBoxLayout();v.addLayout(top)
         self.button(top,'보정 영상 선택',self.choose_calibration)
-        top.addWidget(label('① 영상 추가  →  ② 시작 프레임 선택  →  ③ 측정 시작'),1)
+        top.addWidget(label('① 영상 추가  →  ② 자동 분석  →  ③ 확인할 장면만 검토'),1)
         details=QGroupBox('보정 확인란·칩 규격·촬영 설정 펼치기');details.setCheckable(True);details.setChecked(False)
+        details.setMaximumHeight(38);details.toggled.connect(lambda on:details.setMaximumHeight(16777215 if on else 38))
         dv=QVBoxLayout(details);detail_content=QWidget();dv.addWidget(detail_content);detail_content.hide()
         details.toggled.connect(detail_content.setVisible);v.addWidget(details)
         grid=QGridLayout(detail_content);grid.setColumnStretch(0,3);grid.setColumnStretch(1,2)
@@ -140,21 +141,21 @@ class MainWindow(ExpertWindow):
         vv=QVBoxLayout(videos);bar=QHBoxLayout();vv.addLayout(bar)
         self.button(bar,'실험 영상 추가',self.add_videos)
         self.button(bar,'폴더 영상 추가',self.add_video_folder)
-        self.button(bar,'시작 프레임 선택 · 필수',self.choose_start).setObjectName('primary')
+        self.button(bar,'구간 직접 지정 (선택)',self.choose_start)
         self.button(bar,'칩 수 수정',self.edit_experiments)
         self.button(bar,'칩 개수 확인 사진',self.show_count_preview)
         self.button(bar,'선택 영상 빼기',self.remove_video)
-        self.intake_table=table(['실험 영상','칩 수','시작 프레임 · 필수','상태']);self.intake_table.setMinimumHeight(150);vv.addWidget(self.intake_table)
+        self.intake_table=table(['실험 영상','칩 수','분석 구간 · 자동/직접','상태']);self.intake_table.setMinimumHeight(200);vv.addWidget(self.intake_table)
         self.intake_table.cellDoubleClicked.connect(lambda r,c:self.guarded(lambda:self.choose_start(r)))
         vv.addWidget(label('개수는 자동 제안합니다. 틀리면 직접 바꾸세요. 색 표식이 서로 다른 칩은 가려진 구간 전후를 합쳐 셉니다. 자동 제안은 확인하세요 (설정 최대 32개).'))
         v.addWidget(videos)
         bottom=QHBoxLayout();outer.addLayout(bottom)
         self.output_label=label('저장 위치를 먼저 선택하거나, 영상 추가 시 선택하세요.');bottom.addWidget(self.output_label,1)
         self.button(bottom,'저장 위치 선택',self.new_project)
-        self.start_button=self.button(outer,'측정 시작 · 선택 프레임부터 자동 저장',self.start_batch);self.start_button.setObjectName('primary')
+        self.start_button=self.button(outer,'자동 분석 시작 · 구간 찾기부터 파일 저장까지',self.start_batch);self.start_button.setObjectName('primary')
         self.progress=QProgressBar();self.progress.setRange(0,1);self.progress.setValue(0);self.progress.setFormat('준비');outer.addWidget(self.progress)
         self.video_progress=QProgressBar();self.video_progress.setRange(0,100);self.video_progress.setValue(0);self.video_progress.setFormat('현재 영상 %p%');outer.addWidget(self.video_progress)
-        self.progress_text=label('시작 프레임 지정 → 거리 보정 → 위치·회전 측정 → 파일 저장');outer.addWidget(self.progress_text)
+        self.progress_text=label('자동 구간 찾기 → 거리 보정 → 위치·회전 측정 → 파일 저장');outer.addWidget(self.progress_text)
         row=QHBoxLayout();outer.addLayout(row)
         self.stop_button=self.button(row,'분석 중단',self.stop_quick);self.stop_button.setEnabled(False)
         self.button(row,'저장된 결과 보기',lambda:self.tabs.setCurrentIndex(7))
@@ -179,6 +180,61 @@ class MainWindow(ExpertWindow):
         self.button(row,'② 측정용 영상으로 계수 구하기',self.study_train)
         self.button(row,'③ 저장 계수로 검증 영상 비교',self.study_test)
         self.study_hint=label('용도를 먼저 지정하세요. 검증 영상은 피팅에 사용하지 않습니다.');study.addWidget(self.study_hint)
+        row=QHBoxLayout();study.addLayout(row)
+        self.button(row,'v6 구간·신뢰도 설정',self.coefficient_settings)
+        self.button(row,'분담 제출 정보 저장',self.save_submission)
+        self.button(row,'분담 결과 검사·통합',self.integration_dialog)
+
+    def coefficient_settings(self):
+        self.require();d,v=dialog(self,'v6 계수 계산 설정');form=QFormLayout();v.addLayout(form)
+        duration=number(.01,10.,3);duration.setValue(self.project['analysis'].get('free_segment_duration_s',.25));form.addRow('마찰 구간 실제 시간(s)',duration)
+        count=QSpinBox();count.setRange(0,10000);count.setValue(self.project['analysis'].get('coefficient_bootstrap_count',200));form.addRow('집계 bootstrap 횟수',count)
+        tangent=QSpinBox();tangent.setRange(0,10000);tangent.setValue(self.project['analysis'].get('tangential_bootstrap_count',0));form.addRow('접선 전체 재피팅 횟수 (고급·시간 소요)',tangent)
+        joint=QCheckBox('기존 공통 마찰 피팅도 비교');joint.setChecked(self.project['analysis'].get('compare_joint_fit',False));v.addWidget(joint)
+        buttons(v,d)
+        if d.exec()!=QDialog.DialogCode.Accepted:return
+        self.project['analysis'].update(free_segment_duration_s=duration.value(),coefficient_bootstrap_count=count.value(),tangential_bootstrap_count=tangent.value(),compare_joint_fit=joint.isChecked())
+        # Experiment analysis overrides are full blocks: apply these common settings too.
+        for e in self.project['experiments']:
+            if 'analysis' in e:
+                for k in ('free_segment_duration_s','coefficient_bootstrap_count','tangential_bootstrap_count','compare_joint_fit'):e['analysis'][k]=self.project['analysis'][k]
+        self.save();self.refresh_home()
+
+    def save_submission(self):
+        self.require()
+        if self.busy or self.quick_running:raise ValueError('분석 완료 후 제출하세요.')
+        analyst,ok=QInputDialog.getText(self,'분담 분석 제출','분석자 ID')
+        if not ok or not analyst.strip():return
+        from ..application.integration import write_submission
+        path=write_submission(self.folder,analyst.strip())
+        QMessageBox.information(self,'제출 목록 저장',str(path)+'\n원본은 별도로 보존하고 프로젝트 폴더 전체를 제출하세요.')
+
+    def integration_dialog(self):
+        import json
+        from ..application.integration import inspect_submissions,integrate_submissions
+        d,v=dialog(self,'분담 분석 검사·통합');v.addWidget(label('제출 폴더를 추가하세요. 검토 충돌은 검사 결과의 원본 해시 → 제출 key를 selections에 지정합니다.'))
+        editor=QPlainTextEdit();editor.setPlainText(json.dumps({'folders':[],'selections':{}},ensure_ascii=False,indent=2));v.addWidget(editor)
+        output=QPlainTextEdit();output.setReadOnly(True);v.addWidget(output);row=QHBoxLayout();v.addLayout(row)
+        def add():
+            folder=QFileDialog.getExistingDirectory(d,'제출 프로젝트 폴더')
+            if folder:
+                cfg=json.loads(editor.toPlainText());cfg['folders'].append(folder);editor.setPlainText(json.dumps(cfg,ensure_ascii=False,indent=2))
+        def inspect():
+            cfg=json.loads(editor.toPlainText());report=inspect_submissions(cfg['folders'],cfg.get('selections'));output.setPlainText(json.dumps(report,ensure_ascii=False,indent=2))
+        def integrate():
+            cfg=json.loads(editor.toPlainText());parent=QFileDialog.getExistingDirectory(d,'새 통합 폴더의 상위 폴더')
+            if not parent:return
+            name,ok=QInputDialog.getText(d,'새 통합 폴더','새 폴더 이름')
+            if not ok or not name.strip():return
+            if Path(name).name!=name or name in ('.','..'):raise ValueError('폴더 이름만 입력하세요.')
+            if self.busy:raise ValueError('진행 중인 작업을 먼저 마치세요.')
+            destination=Path(parent)/name
+            d.accept()
+            self.background(lambda:integrate_submissions(cfg['folders'],destination,cfg.get('selections')),
+                lambda result:QMessageBox.information(self,'통합 완료',json.dumps(result,ensure_ascii=False,indent=2)),
+                '새 프로젝트로 관측 통합·계수 재산출')
+        self.button(row,'제출 폴더 추가',lambda:self.guarded(add));self.button(row,'읽기 전용 검사',lambda:self.guarded(inspect));self.button(row,'새 프로젝트로 통합',lambda:self.guarded(integrate))
+        d.resize(1000,750);d.exec()
 
     def build_review(self):
         super().build_review()
@@ -211,7 +267,7 @@ class MainWindow(ExpertWindow):
         self.frame_spin.valueChanged.connect(self.slider.setValue)
         self.slider.valueChanged.connect(lambda f:(self.frame_spin.blockSignals(True),self.frame_spin.setValue(f),self.frame_spin.blockSignals(False)))
         zoom=QHBoxLayout();layout.addLayout(zoom)
-        self.button(zoom,'− 축소',lambda:self.image_view.zoom_at(1/1.3));self.button(zoom,'+ 확대',lambda:self.image_view.zoom_at(1.3))
+        self.button(zoom,'- 축소',lambda:self.image_view.zoom_at(1/1.3));self.button(zoom,'+ 확대',lambda:self.image_view.zoom_at(1.3))
         self.button(zoom,'전체 보기',self.image_view.reset_view)
         self.zoom_label=label('100%');zoom.addWidget(self.zoom_label);self.image_view.zoomChanged.connect(lambda z:self.zoom_label.setText(f'{z*100:.0f}%'))
         self.click_mode.currentTextChanged.connect(lambda text:setattr(self.image_view,'point_mode',text!='확대·조회'))
@@ -390,13 +446,6 @@ class MainWindow(ExpertWindow):
         if self.quick_running or self.busy:raise ValueError('이미 분석 중입니다.')
         if not self.project['experiments']:raise ValueError('실험 영상을 먼저 추가하세요.')
         ids=[e['id'] for e in self.selected_experiments()] if selected else None
-        from ..measurement.selection import require_start
-        pending=[]
-        for e in self.project['experiments']:
-            if ids is not None and e['id'] not in ids:continue
-            try:require_start(self.project,e)
-            except ValueError:pending.append(e['name'])
-        if pending:raise ValueError('먼저 시작 프레임을 직접 선택하세요: '+', '.join(pending))
         self.quick_settings_changed();snapshot=copy.deepcopy(self.project);self.quick_control=Control()
         self.quick_running=True;self.start_button.setEnabled(False);self.stop_button.setEnabled(True)
         self.progress.setRange(0,100);self.progress.setValue(0);self.progress.setFormat('전체 작업 %p%');self.video_progress.setValue(0);self.progress_text.setText('보정 준비 중 · 영상 진행률은 측정 시작 후 표시됩니다.')
@@ -434,7 +483,7 @@ class MainWindow(ExpertWindow):
         stage=value.get('stage',value.get('status',''))
         if 'overall_percent' in value:
             self.progress.setValue(round(value['overall_percent']));self.video_progress.setValue(round(value['video_percent']))
-        names={'geometry':'여러 프레임의 격자 일치 확인 중','export':'결과 파일 저장 중','calibrating':'보정판 찾고 거리 변환 확인 중','counting':'칩 개수 자동 확인 중','detect':'칩 중심과 색 표시 추적 중',
+        names={'interval':'시작·끝 자동 탐색 중','geometry':'여러 프레임의 격자 일치 확인 중','export':'결과 파일 저장 중','calibrating':'보정판 찾고 거리 변환 확인 중','counting':'칩 개수 자동 확인 중','detect':'칩 중심과 색 표시 추적 중',
                'analysis':'충돌 후보 확인 중','kinematics':'속도·회전 계산 중','complete':'데이터 저장 완료','failed':'처리 실패 · 다음 영상 진행'}
         frame=value.get('frame');prefix=(f"{value['video_index']}/{value['video_total']}번째 영상 · {value.get('video_name','')} · " if value.get('video_index') else '보정 영상 · ')
         self.progress_text.setText(prefix+names.get(stage,'분석 중')+(f' · 프레임 {frame}' if frame is not None else '')+' (단계별 진행률)')
@@ -489,7 +538,7 @@ class MainWindow(ExpertWindow):
             count=len(e['participating_chip_ids']);proposal=e.get('count_proposal',{})
             cs=f'{count}개 (직접 지정)' if e.get('count_mode')!='auto' else f"{proposal['count']}개 (자동 · {'확인 필요' if proposal.get('status')=='review_required' else '반복 관측'})" if proposal else '자동 인식 예정'
             state={'counting':'칩 수 확인 중','pending':'분석 대기','failed':'실패 · 확인 필요','cancelled':'중단됨','complete':'저장 완료'}.get(e.get('status'),self.status_text(e.get('status','pending')))
-            start=e.get('start_selection',{});start_text=(f"{start['frame']} → {start.get('end') if start.get('end') is not None else '끝'} · 확인됨" if start.get('confirmed') else '선택 필요')
+            start=e.get('start_selection',{});start_text=(f"{start['frame']} → {start.get('end') if start.get('end') is not None else '끝'} · 확인됨" if start.get('confirmed') else '자동 탐색' if not start else '자동 구간 · 해제 확인 전')
             for j,value in enumerate([e['name'],cs,start_text,state]):self.intake_table.setItem(i,j,QTableWidgetItem(value))
             result={}
             if e.get('last_run') and e.get('status')=='complete':
@@ -541,7 +590,7 @@ class MainWindow(ExpertWindow):
         e=self.project['experiments'][i]
         if not e.get('last_run'):raise ValueError('먼저 분석을 실행하세요.')
         path=self.folder/e['last_run']/'export/physics_preview.json'
-        if not path.exists():raise ValueError('v4.5는 영상 측정과 물리 피팅을 분리합니다. 아래 ① 영상 용도 나누기 → ② 계수 구하기를 사용하세요.')
+        if not path.exists():raise ValueError('v5.0는 영상 측정과 물리 피팅을 분리합니다. 아래 ① 영상 용도 나누기 → ② 계수 구하기를 사용하세요.')
         data=read_json(path);lines=['탐색 계산입니다. 검증된 최종 계수나 정확도가 아닙니다.']
         for f in data.get('free_motion',[]):
             if f.get('mu_bottom') is not None:lines.append(f"{f['chip_id']}: 바닥 마찰 추정 {f['mu_bottom']:.4f}, 위치 적합 오차 {f['position_fit_rmse_m']*1000:.2f} mm ({f['status']})")
@@ -594,7 +643,7 @@ class MainWindow(ExpertWindow):
         QMessageBox.information(self,'고정 계수 검증 저장','계수를 다시 피팅하지 않고 비교했습니다.\n상태: '+('비교 완료' if result['status']=='conditional_holdout_evaluated' else '검증할 유효 구간 부족')+'\n'+result['path'])
 
     def open_manual(self):
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(__file__).resolve().parents[3]/'docs/operations/README_V45_KO.md')))
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(__file__).resolve().parents[3]/'docs/operations/README_V6_KO.md')))
 
     def closeEvent(self,event):
         if self.quick_running:
@@ -607,9 +656,9 @@ class MainWindow(ExpertWindow):
 from .workbench_v45 import ReviewWorkflow
 
 class MainWindow(ReviewWorkflow, MainWindow):
-    """v4.5 workflow with the stable v4 compatibility surface."""
+    """v6 workflow with the stable v4 compatibility surface."""
     pass
 
 def main(folder=None):
-    app=QApplication.instance() or QApplication([]);app.setApplicationName('PokerChip Research v4.5')
+    app=QApplication.instance() or QApplication([]);app.setApplicationName('PokerChip Research v6.0')
     w=MainWindow(folder);w.show();return app.exec()
