@@ -11,6 +11,8 @@ HEADERS=['영상','칩 번호','프레임','실제 시간(s)','중심 x(px)','�
          '속도 x(m/s)','속도 y(m/s)','속력(m/s)','가속도 x(m/s²)','가속도 y(m/s²)',
          '연속 회전각(rad)','각속도(rad/s)','각가속도(rad/s²)','속도 x(px/s)','속도 y(px/s)',
          '거리 보정 상태','시간 상태','각도 상태','측정 출처','빈 값 이유','분석 기록','단일 프레임 방향(rad)']
+HEADERS+=['계산 경고','경고 관측 포함','경고 관측 수','사용 관측 수','경고 관측 비율','경고 칩·프레임']
+HEADERS+=['계산 상태','미터 계산 상태','픽셀 계산 상태']
 
 
 def trajectory_rows(run):
@@ -33,7 +35,11 @@ def human_rows(run,name):
             r.get('vx_m_s'),r.get('vy_m_s'),r.get('speed_m_s'),r.get('ax_m_s2'),r.get('ay_m_s2'),
             r.get('theta_unwrapped_rad'),
             r.get('omega_rad_s'),r.get('alpha_rad_s2'),r.get('vx_px_s'),r.get('vy_px_s'),
-            r.get('geometry_status'),r.get('time_status'),r.get('angle_status'),r.get('source'),r.get('reason'),run.name,r.get('theta_wrapped_rad')]
+            r.get('geometry_status'),r.get('time_status'),r.get('angle_status'),r.get('source'),r.get('reason'),run.name,r.get('theta_wrapped_rad'),
+            json.dumps(r.get('calculation_warnings',[]),ensure_ascii=False),r.get('uses_warned_observations',False),
+            r.get('warning_observation_count',0),r.get('used_observation_count',0),r.get('warning_observation_fraction',0),
+            json.dumps(r.get('warning_observation_refs',[]),ensure_ascii=False),
+            r.get('calculation_status'),r.get('metric_calculation_status'),r.get('pixel_calculation_status')]
 
 def publish_results(folder,project,issues=()):
     folder=Path(folder);out=folder/'results';out.mkdir(exist_ok=True)

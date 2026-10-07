@@ -131,7 +131,8 @@ def propose_interval(path,project,experiment,folder,control=None,progress=None):
         for c in cs:
             try:
                 d=measure(image,c,{},settings)
-                if d['status']=='low_confidence' or d['visible_arc_fraction']<.65:continue
+                from ..core.observation_policy import usable
+                if not usable(d,world=False,time=False):continue
                 if any(np.linalg.norm(np.array(d['raw_center_px'])-q['raw_center_px'])<.7*(d['radius_px']+q['radius_px']) for q in ds):continue
                 ds.append(d)
             except (ValueError,cv2.error,np.linalg.LinAlgError):continue

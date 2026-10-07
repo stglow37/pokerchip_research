@@ -1,3 +1,17 @@
+<!-- V6 IMPLEMENTATION -->
+# v6 인수인계 — 2026-10-06
+
+경고 포함 계산·구간/사건별 계수·반복성/재표본·분담 관측 통합을 별도 `codex/analysis-quality-and-coefficient-integration` worktree에서 구현했다. [요구사항 인수 확인](V6_REQUIREMENTS_KO.md), [실행 기록](../../validation/test-records/v6/REPORT_KO.md), [사용 안내](../operations/README_V6_KO.md)를 따른다.
+
+- 전체 198개 시험 통과(Windows CPython 3.14.7, 78.64초). GUI 생성/종료·실제 4영상 프로젝트 로드, 기존 CLI 도움말, pip check, diff 공백 검사 확인.
+- Farkas/IFR 식·부호·단위, schema 2.0, 기존 import/CLI/RUN.cmd 유지. 계산 정책/경고 전파 및 추가 출력 계약만 갱신했다.
+- 원 ZIP과 기존 main/사용자 미추적 문서를 보존했다. 새 run·계수·통합 결과만 별도 폴더에 저장했다. 증거용 ignored work 폴더와 runtime.local.json은 의도적으로 유지하며 소스 배포에 포함하지 않는다.
+- 소프트웨어 인수 완료와 독립 물리 정확도는 구별한다. 개발 ZIP의 잠정 μ_b=0.18201687, e_n=0.67513784. 적격 접선 2건으로 해당 대표계수는 보류다.
+- 다음 연구 작업은 개발에 사용하지 않은 새 촬영 세션과 독립 시간·거리 기준으로 반복성/예측 오차를 평가하는 것이다. 먼저 `docs/operations/DISTRIBUTED_ANALYSIS_V6_KO.md`의 공통 설정·세션/원본 배정 규약을 확인한다.
+- 2026-10-06 개발 인수 작업에서는 commit·push·PR·main 병합을 하지 않았다. 2026-10-07 GitHub 통합과 시험 재실행 생략 범위는 [업로드 기록](../../validation/test-records/v6/PUBLICATION_20261007_KO.md)을 따른다. 실제 Windows DPI/장시간 사용성과 고급 접선 CI coverage의 독립 연구 검증은 아직 주장하지 않는다.
+
+---
+
 <!-- V5 RELEASE -->
 # v5 인수인계
 

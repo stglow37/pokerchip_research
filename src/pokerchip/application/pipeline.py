@@ -347,6 +347,7 @@ def derive(path,config,experiment,check,report):
             half=config["analysis"]["max_window_samples"]//2
             neighbors=[r for r in db.rows("manual",row["chip_id"],row["frame_index"]-half,row["frame_index"]+half) if r.get("scope_segment")==row.get("scope_segment")]
             result=kinematic_at(row,neighbors,config["analysis"],barriers)
+            result['metric_calculation_status']=result['calculation_status']
             # Always export pixel-space derivatives, with the same gap/event gates.
             pixel_rows=[]
             for r in neighbors:
@@ -355,6 +356,11 @@ def derive(path,config,experiment,check,report):
             target=next((r for r in pixel_rows if r['frame_index']==row['frame_index']),None)
             if target:
                 pixel=kinematic_at(target,pixel_rows,config['analysis'],barriers)
+                result['pixel_calculation_status']=pixel['calculation_status']
+                result['pixel_warning_audit']={k:pixel.get(k) for k in ('calculation_warnings','warning_observation_refs','used_observation_refs','warning_observation_count','used_observation_count','warning_observation_fraction','uses_warned_observations')}
+                if result.get('world_center_m') is None and pixel['calculation_status'].startswith('computed'):
+                    result.update(result['pixel_warning_audit'])
+                    result['calculation_status']='partially_computed_with_warnings' if pixel.get('uses_warned_observations') else 'partially_computed'
                 for dest,src in [('vx_px_s','vx_m_s'),('vy_px_s','vy_m_s'),('ax_px_s2','ax_m_s2'),('ay_px_s2','ay_m_s2')]:result[dest]=pixel.get(src)
                 if result.get('world_center_m') is None and pixel.get('omega_rad_s') is not None:
                     for key in ('omega_rad_s','alpha_rad_s2','theta_unwrapped_rad','omega_sigma_rad_s','angle_status'):result[key]=pixel.get(key)

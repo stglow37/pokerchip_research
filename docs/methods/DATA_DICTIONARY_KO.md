@@ -1,3 +1,10 @@
+<!-- V6 DEVELOPMENT -->
+# v6 선택 필드
+
+[V6_DATA_ADDITIONS_KO.md](V6_DATA_ADDITIONS_KO.md)에 실제 의존 관측/경고 참조, 구간별·충돌별 계수, 집계·불확실성, 제출·통합 provenance를 정의했다. schema 2.0 및 기존 필드/파일명을 유지한다.
+
+---
+
 <!-- V5 RELEASE -->
 # v5 데이터 계약
 

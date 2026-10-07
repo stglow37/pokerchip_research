@@ -4,6 +4,7 @@ import numpy as np
 from ..core.task import least_squares
 from ..core.config import Body
 from .physics.farkas import propagate
+from ..core.observation_policy import usable, warning_audit
 
 
 def reconstruct(event, rows, cfg, mu):
@@ -15,9 +16,8 @@ def reconstruct(event, rows, cfg, mu):
         for side in ('pre','post'):
             old=event[side][i];needed=old.get('angle_fit_frames') or old.get('fit_frames',[])
             rr=sorted([r for r in rows if r['chip_id']==key and r['frame_index'] in needed],key=lambda r:r['frame_index'])
-            if len(rr)<5 or any(r.get('theta_wrapped_rad') is None or r.get('world_center_m') is None
-                    or r.get('physical_time_s') is None or r.get('assignment_ambiguous') or r.get('measurement_warning') for r in rr):
-                raise ValueError('충돌 양쪽의 선명한 위치·각도 표본이 부족합니다.')
+            if len(rr)<5 or any(not usable(r,orientation=True) for r in rr):
+                raise ValueError('충돌 양쪽 위치·각도 표본 5개 필요 또는 필수 입력 누락')
             ts=np.array([r['physical_time_s'] for r in rr]);ff=np.array([r['frame_index'] for r in rr])
             if np.any(np.diff(ff)!=1) or np.any(np.diff(ts)<=0):raise ValueError('충돌 전후 표본이 연속되지 않습니다.')
             bound=cfg['analysis'].get('omega_bound_rad_s')
@@ -43,16 +43,21 @@ def reconstruct(event, rows, cfg, mu):
             new=copy.deepcopy(old);new.update(position_sigma=sig[:2].tolist(),velocity_sigma=sig[2:4].tolist(),omega_sigma=float(sig[5]),state_covariance_conditional=covariance.tolist())
             new.update(position=state[:2].tolist(),velocity=state[2:4].tolist(),theta=float(state[4]),omega=float(state[5]))
             states[side].append(new)
-            audit.append(dict(chip_id=key,side=side,frames=ff.tolist(),optimizer_success=bool(fit.success),
+            new.update(warning_audit(rr))
+            audit.append(dict(**warning_audit(rr),chip_id=key,side=side,frames=ff.tolist(),optimizer_success=bool(fit.success),
                               residual_scaled_rms=float(np.sqrt(np.mean(residual(fit.x)**2)))))
     pre,post=states['pre'],states['post']
     d=np.array(pre[1]['position'])-pre[0]['position'];distance=np.linalg.norm(d)
     if distance<1e-8:raise ValueError('충돌 법선을 결정할 수 없습니다.')
     radius=sum(c['radius_m'] for c in cfg['chips'] if c['id'] in event['pair'])
-    if abs(distance-radius)>.004:raise ValueError('환산한 접촉 거리 잔차가 4 mm를 초과합니다.')
+    combined=warning_audit([event]+states['pre']+states['post'])
+    result.update(combined)
+    contact_warnings=list(combined['calculation_warnings'])
+    if abs(distance-radius)>.004:contact_warnings.append('접촉 거리 잔차 4 mm 초과')
     n=d/distance;a=(np.array(pre[0]['velocity'])-pre[1]['velocity'])@n;b=(np.array(post[0]['velocity'])-post[1]['velocity'])@n
-    if a<=.01 or b>0:raise ValueError('접근 후 분리하는 충돌 상태가 아닙니다.')
-    result.update(**states,normal=n.tolist(),a_m_s=float(a),e_n_obs=float(-b/a),
+    if a<=1e-12:raise ValueError('양의 충돌 접근 속도가 없습니다.')
+    if a<=.01 or b>0:contact_warnings.append('낮은 접근 속도 또는 분리 불확실')
+    result.update(**states,calculation_warnings=sorted(set(contact_warnings)),normal=n.tolist(),a_m_s=float(a),e_n_obs=float(-b/a),
         measurement_e_n_obs=event.get('e_n_obs'),velocity_scope='farkas_fixed_mu_contact_reconstruction',
         reconstruction=dict(mu_fixed=float(mu),time_fixed_s=tc,contact_distance_m=float(distance),fits=audit,
             uncertainty='conditional Jacobian covariance propagated to contact time; fixed-mu/model/clock/geometry systematics excluded'))

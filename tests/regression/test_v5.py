@@ -165,12 +165,14 @@ def test_same_impact_survives_one_missing_frame():
 def test_automatic_impact_gate_preserves_review_and_does_not_filter_restitution():
     from pokerchip.analysis.kinematics import automatic_impact_gate
     event={'kind':'isolated_binary','status':'review_required','boundary_frame_interval':[30,31],
-        'pre':[{'fit_frames':list(range(25,31))}]*2,'post':[{'fit_frames':list(range(31,37))}]*2,
+        'normal':[1.,0.],
+        'pre':[{'position':[0.,0.],'velocity':[1.,0.],'fit_frames':list(range(25,31))}]*2,'post':[{'position':[.04,0.],'velocity':[0.,0.],'fit_frames':list(range(31,37))}]*2,
         'normal_sigma_rad_approx':.02,'a_m_s':1.,'approach_sigma_m_s':.03,'e_n_obs':1.1}
     assert automatic_impact_gate(event)['eligible']
     assert event['status']=='review_required'
     event['boundary_frame_interval']=[30,35]
-    assert not automatic_impact_gate(event)['eligible']
+    assert automatic_impact_gate(event)['eligible']
+    assert automatic_impact_gate(event)['warnings']
 
 
 def test_manual_center_does_not_keep_old_projected_outline():

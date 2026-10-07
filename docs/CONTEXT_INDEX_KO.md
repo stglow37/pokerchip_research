@@ -1,3 +1,13 @@
+<!-- V6 DEVELOPMENT -->
+# v6.0.0 먼저 읽기
+
+[v6 사용 안내](operations/README_V6_KO.md), [분담 분석 규약](operations/DISTRIBUTED_ANALYSIS_V6_KO.md), [추가 데이터 계약](methods/V6_DATA_ADDITIONS_KO.md), [ADR-008](decisions/ADR-008-v6-warning-and-integration.md).
+v6는 소프트웨어 인수를 마쳤다. GitHub 통합·태그 보존 범위와 업로드 직전 재시험 생략은 [업로드 기록](../validation/test-records/v6/PUBLICATION_20261007_KO.md)을 따른다. 독립 물리 검증과 구별한다. 아래 v5는 이전 릴리스 기록이다.
+
+[v6 요구사항 인수 확인](development/V6_REQUIREMENTS_KO.md)과 [최신 실행 증거](../validation/test-records/v6/REPORT_KO.md)에 구현 근거와 미검증 범위를 구분한다.
+
+---
+
 <!-- V5 RELEASE -->
 # v5 먼저 읽기
 

@@ -92,7 +92,7 @@ def event_source_identity(experiment):
 
 def event_review_basis(event, rows, config):
     fields=('frame_index','chip_id','raw_center_px','world_center_m','theta_wrapped_rad','status','measurement_warning','scope_segment','fit_enabled')
-    return digest({'pair':event['pair'],'candidate':[event['frame_start'],event['frame_end']],
+    return digest({'policy_version':6,'pair':event['pair'],'candidate':[event['frame_start'],event['frame_end']],
         'rows':[{k:r.get(k) for k in fields} for r in rows],
         'time':config['time_profile'],'calibration':config['calibration'],'analysis':config['analysis'],
         'geometry':[{k:c.get(k) for k in ('id','radius_m','radius_sigma_m')} for c in config['chips']]})

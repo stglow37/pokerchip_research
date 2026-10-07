@@ -16,7 +16,7 @@ class ReviewWorkflow:
     def __init__(self,folder=None):
         self.study_control=None;self.seed_context=None;self._full_dialog=None
         super().__init__(folder)
-        self.setWindowTitle('포커칩 연구실 · v5.0')
+        self.setWindowTitle('포커칩 연구실 · v6.0')
         self.setMinimumSize(960,680)
         check=Path(__file__).parent/'resources'/'checked.svg'
         self.setStyleSheet(self.styleSheet()+f'''
@@ -318,7 +318,18 @@ QLabel#title {{font-size:16pt;}}
                     if self.show_markers.isChecked():
                         p=tuple(np.round(point).astype(int));cv2.drawMarker(img,p,color,cv2.MARKER_CROSS,14,2);cv2.line(img,center,p,color,1)
             labels.append(r['chip_id']+': '+(' · '.join(found) or '표식 미검출')+(' · 각도 있음' if r.get('theta_wrapped_rad') is not None else ' · 회전 미측정'))
+            from ..core.observation_policy import warnings
+            if warnings(r):labels[-1]+=' · 경고 포함: '+', '.join(warnings(r))
+        details=[]
+        if self.current_run:
+            with Records(self.current_run/'records.sqlite',readonly=True) as db:
+                derived=list(db.rows('trajectories',start=self.slider.value(),end=self.slider.value()))
+            for r in derived:
+                if r.get('uses_warned_observations'):
+                    labels.append(r['chip_id']+' 계산: 경고 관측 '+str(r.get('warning_observation_count',0))+'개 포함')
+                    details.append(r['chip_id']+': '+str(r.get('warning_observation_refs',[])))
         self.image_view.set_image(img);self.marker_summary.setText(' | '.join(labels) or '현재 장면에 관측된 칩이 없습니다.')
+        self.marker_summary.setToolTip('\n'.join(details))
 
     def load_review_data(self):
         super().load_review_data()
@@ -327,6 +338,11 @@ QLabel#title {{font-size:16pt;}}
             if interval:
                 self.event_table.item(i,2).setText(f'{interval[0]} → {interval[1]}')
                 self.event_table.item(i,2).setToolTip(f"후보 탐색 범위 {event['frame_start']}–{event['frame_end']} / 표시한 두 프레임은 유효 전후 표본")
+            reasons=event.get('calculation_warnings',[])+event.get('automatic_fit_gate',{}).get('warnings',[])
+            refs=event.get('warning_observation_refs',[])
+            if reasons:
+                self.event_table.item(i,3).setText(self.event_table.item(i,3).text()+' · 경고 포함')
+                self.event_table.item(i,3).setToolTip(', '.join(sorted(set(reasons)))+'\n원인 관측: '+str(refs))
         if not self.current_run or self.graph_kind.currentIndex()==1:return
         with Records(self.current_run/'records.sqlite') as db:rows=list(db.rows('trajectories'))
         rows=[r for r in rows if r.get('status') not in ('outside_interval','missing','predicted_only')]
@@ -432,6 +448,11 @@ QLabel#title {{font-size:16pt;}}
         for key,name in names.items():
             status=bank.get('coefficient_status',{}).get(key,{})
             lines.append(name+': '+(f"{bank['parameters'][key]:.6g}" if key in bank['parameters'] else '계산 보류')+'\n'+status.get('reason','상세 기록 확인'))
+            uncertainty=bank.get('reliability',{}).get(key,{})
+            lines[-1]+='\n사용 입력 '+str(status.get('used_trials',0))+' · 영상 '+str(status.get('independent_videos','?'))+' · 세션 '+str(status.get('sessions','?'))
+            lines[-1]+='\n재표본 95% 구간: '+str(uncertainty.get('interval95'))+' · '+uncertainty.get('scope','미산출')
+            lines[-1]+='\n경고 관측 '+str(status.get('warning_observations',0))+'개 · 비율 '+str(status.get('warning_observation_fraction'))+'\n'+', '.join(status.get('calculation_warnings',[]))
+        lines.append('경고 포함 관측 '+str(len(bank.get('warning_observation_refs',[])))+'개\n'+', '.join(bank.get('calculation_warnings',[])))
         lines.append('숫자가 나왔다는 사실은 정확도 검증이 아닙니다. 저장 계수로 다른 영상을 비교하세요.')
         QMessageBox.information(self,'계수별 상태','\n\n'.join(lines))
 

@@ -24,6 +24,11 @@ def main(argv=None):
     p=commands.add_parser("quality",help="프로젝트 준비 상태와 품질 요약");p.add_argument("folder")
     p=commands.add_parser("validate-labels",help="독립 정답과 자동 관측 비교");p.add_argument("run");p.add_argument("labels")
     p=commands.add_parser("profile",help="충돌 계수 robust 목적함수 profile");p.add_argument("dataset");p.add_argument("fit");p.add_argument("output");p.add_argument("--points",type=int,default=9)
+    p=commands.add_parser('study-train',help='v6 구간별 계수·집계·신뢰도');p.add_argument('folder')
+    p=commands.add_parser('submission',help='분담 분석 제출 manifest 생성');p.add_argument('folder');p.add_argument('--analyst',required=True)
+    p=commands.add_parser('study-test',help='저장 계수 고정 검증');p.add_argument('folder');p.add_argument('constants')
+    p=commands.add_parser('integration-inspect',help='분담 제출본 읽기 전용 검사');p.add_argument('folders',nargs='+');p.add_argument('--selections')
+    p=commands.add_parser('integrate',help='해결된 제출본을 새 프로젝트로 통합');p.add_argument('destination');p.add_argument('folders',nargs='+');p.add_argument('--selections')
     args=parser.parse_args(argv)
     try:
         if args.command=="init":create_project(args.folder)
@@ -92,6 +97,24 @@ def main(argv=None):
             data=read_json(args.dataset);fit=read_json(args.fit)["stages"]["impact_conditional"]
             train,_=split_trials(data["impact_trials"],data["split"]["train"],data["split"]["holdout"],data["split"].get("unit","session"))
             atomic_json(args.output,profile_impacts(train,fit,args.points))
+        elif args.command=='submission':
+            from .application.integration import write_submission
+            print(dumps({'path':str(write_submission(args.folder,args.analyst))}))
+        elif args.command=='study-train':
+            from .models.study import train_constants
+            p=load_project(args.folder);result=train_constants(args.folder,p)
+            p['constant_bank']=str(Path(result['path']).resolve().relative_to(Path(args.folder).resolve()));save_project(args.folder,p)
+            print(dumps(result))
+        elif args.command=='study-test':
+            from .models.study import evaluate_fixed
+            print(dumps(evaluate_fixed(args.folder,load_project(args.folder),args.constants)))
+        elif args.command in ('integration-inspect','integrate'):
+            from .application.integration import inspect_submissions,integrate_submissions
+            choices=read_json(args.selections) if args.selections else None
+            if args.command=='integration-inspect':
+                result=inspect_submissions(args.folders,choices);print(dumps(result))
+                if result['issues']:return 2
+            else:print(dumps(integrate_submissions(args.folders,args.destination,choices)))
         return 0
     except Exception as exc:
         print(f"오류: {type(exc).__name__}: {exc}",file=sys.stderr)

@@ -78,15 +78,17 @@ def test_sqlite_backup_captures_wal_and_cache_rejects_corruption(tmp_path):
     db.close();dest.write_bytes(b'not a database');assert not database_ok(dest)
 
 
-def test_blurred_neighbor_cannot_bias_velocity():
+def test_blurred_neighbor_is_used_and_labelled_v6():
     from pokerchip.analysis import kinematic_at
     from pokerchip.config import default_project
     cfg=default_project()['analysis'];cfg.update(window_s=.1,min_samples=3)
     rows=[dict(frame_index=f,chip_id='chip_1',raw_center_px=[f,0],world_center_m=[f*.01,0],physical_time_s=f*.01,status='observed',source='observation') for f in range(9)]
-    rows[4].update(measurement_warning='blurred_edge_review',world_center_m=[100.,0.])
+    rows[4].update(measurement_warning='blurred_edge_review',status='low_confidence')
     target=kinematic_at(rows[2],rows,cfg,[])
     assert target['vx_m_s']==pytest.approx(1.)
-    assert kinematic_at(rows[4],rows,cfg,[])['vx_m_s'] is None
+    assert kinematic_at(rows[4],rows,cfg,[])['vx_m_s']==pytest.approx(1.)
+    assert target['uses_warned_observations']
+    assert any(r['frame_index']==4 for r in target['warning_observation_refs'])
 
 
 def test_zero_count_retries_temporal_sampling_without_assuming_a_chip(monkeypatch):

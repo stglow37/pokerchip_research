@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-echo PokerChip Research v5.0 - Python 3.12 to 3.14
+echo PokerChip Research v6.0 - Python 3.12 to 3.14
 python --version
 if errorlevel 1 goto failed
 if not exist ".venv\Scripts\python.exe" python -m venv .venv

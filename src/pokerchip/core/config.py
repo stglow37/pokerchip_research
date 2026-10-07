@@ -64,6 +64,8 @@ def default_project(name="새 연구"):
             "analysis": {"detector_profile": "dark_chip", "radius_px": [20, 110], "roi_px": None, "max_candidates": 12,
                          "max_gap_frames": 12, "assignment_gate_px": 90., "redetect_every": 5,
                          "edge_rays": 144, "window_s": .08, "min_samples": 5,
+                         "free_segment_duration_s": .25, "coefficient_bootstrap_count": 200,
+                         "compare_joint_fit": False, "tangential_bootstrap_count": 0,
                          "max_window_samples": 161, "omega_bound_rad_s": None,
                          "chunk_frames": 32, "max_frame_bytes": 64 * 1024 * 1024,
                          "max_buffer_bytes": 160 * 1024 * 1024},
@@ -103,6 +105,14 @@ def validate(project):
     from .timebase import TimeProfile
     TimeProfile(project["time_profile"], project["mode"])
     a = project["analysis"]
+    for settings in [a]+[e['analysis'] for e in project['experiments'] if e.get('analysis')]:
+        duration=settings.get('free_segment_duration_s',.25)
+        if not isinstance(duration,(int,float)) or not math.isfinite(duration) or duration<=0:
+            raise ValueError('마찰 구간 길이는 양의 실제 시간이어야 합니다.')
+        for key,default in (('coefficient_bootstrap_count',200),('tangential_bootstrap_count',0)):
+            value=settings.get(key,default)
+            if isinstance(value,bool) or not isinstance(value,int) or not 0<=value<=10000:
+                raise ValueError(key+': 0..10000 정수 필요')
     if a.get("detector_profile","dark_chip")!="dark_chip":
         raise ValueError("이 연구는 검정 칩 + 가장자리 색칠 + 내부 스티커만 지원합니다.")
     radii=a["radius_px"]

@@ -1,3 +1,12 @@
+<!-- V6 DEVELOPMENT -->
+# v6 시험 진입점
+
+전체 실행은 `python -m pytest -q`다. 2026-10-07 GitHub 업로드 직전 시험·빌드·GUI·CLI 실행은 사용자 요청으로 생략했으며 아래는 기존 개발 검증 기록이다. 2026-10-06 Windows CPython 3.14.7에서 **198개가 78.64초에 통과**했다. 기존 dataset/preview 장벽과 세션 누락 차단을 포함한다. 해당 실행에는 `QT_QPA_PLATFORM=offscreen`을 사용했다. v6 집중 검사는 `tests/regression/test_v6.py`, `tests/regression/test_v6_bootstrap.py`, `tests/integration/test_v6_integration.py`다. 정확한 최신 상태는 [v6 실행 기록](../../validation/test-records/v6/REPORT_KO.md)을 우선한다.
+
+실제 ZIP 관측 비교는 `python validation/run_v6_zip.py ZIP NEW_DESTINATION`으로 실행한다. 반드시 존재하지 않는 새 목적지를 사용한다. 저장된 원 관측의 재계산이며 영상 재추적/독립 참값 검증이 아니다. 개발 worktree에 가상환경이 없으면 기존 Python 실행 파일의 절대 경로를 사용하고, 작업 디렉터리는 v6 worktree로 지정한다. `RUN.cmd`/GUI 최종 확인도 v6 worktree에서 수행한다.
+
+---
+
 <!-- V5 RELEASE -->
 # v5 시험 진입점
 
