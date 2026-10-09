@@ -1,3 +1,9 @@
+# 연구용 audit1 추가 진입점
+
+- [사용법](operations/AUDIT1_KO.md)
+- [접촉 마찰장 ADR](decisions/ADR-009-exploratory-contact-field.md)
+- [후반 격자 복구 ADR](decisions/ADR-010-late-grid-recovery.md)
+
 <!-- V6 DEVELOPMENT -->
 # v6.0.0 먼저 읽기
 

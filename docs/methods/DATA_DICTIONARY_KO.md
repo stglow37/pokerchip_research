@@ -1,3 +1,7 @@
+# audit1 추가 API (기존 저장 형식 변경 없음)
+
+models.contact_field의 상태는 [x,y,vx,vy,theta,omega], SI와 반시계 양수다. 계수 [mu0,mux,muy]는 무차원, radius는 m, kappa=I/(mR²)이다. mu0≥sqrt(mux²+muy²)로 국소 마찰의 음수를 금지한다. 상세 적용 범위는 ADR-009와 AUDIT1_KO.md를 따른다.
+
 <!-- V6 DEVELOPMENT -->
 # v6 선택 필드
 
