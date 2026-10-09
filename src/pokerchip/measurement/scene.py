@@ -15,7 +15,11 @@ def video_floor_scene(path, calibration, pitches=PITCHES, start=0, control=None,
     """
     from .video import frames, metadata
     total = metadata(path).get('estimated_frames') or start + 151
-    indices = sorted({f for f in (0, 12, 30, 60, 90, 150, start, start+12)
+    # Early frames can be occluded by the launcher or hands. Later image-only
+    # samples are allowed for geometry, while the same consensus/error gates
+    # remain in force. No measured motion or fitted coefficient chooses a map.
+    later = tuple(int((total-1)*q) for q in (.20,.35,.50,.65,.80,.95))
+    indices = sorted({f for f in (0, 12, 30, 60, 90, 150, start, start+12,*later)
                       if 0 <= f < total})
     accepted, attempts = [], []
     for timing, image in frames(path, end=max(indices, default=0)):

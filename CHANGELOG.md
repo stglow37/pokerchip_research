@@ -1,3 +1,9 @@
+# 6.0.0+audit1 — 2026-10-10 (local research)
+
+- Recover a per-video floor map from later unoccluded frames without weakening consensus gates.
+- Add a passive, nonuniform circular-contact free-motion candidate API; retain default Farkas/IFR behavior.
+- Add 9 tests; full suite: 207 passed. Real experiment validity is assessed separately.
+
 <!-- V6 DEVELOPMENT -->
 # v6.0.0 — 2026-10-07
 

@@ -1,3 +1,9 @@
+# 6.0.0+audit1 연구용 개선본
+
+초반 격자 가림에 대한 후반 프레임 보정 복구와 별도 비균일 접촉 마찰 모델 API를 추가했습니다. [audit1 사용법](docs/operations/AUDIT1_KO.md)과 [게시 범위·검증 기록](validation/test-records/audit1/PUBLICATION_KO.md)을 먼저 확인하세요. 공식 릴리스나 실험적으로 확정된 새 물리 이론을 뜻하지 않습니다.
+
+---
+
 # PokerChip Astra v6.0
 
 현재 v6.0.0의 사용법은 [v6 안내](docs/operations/README_V6_KO.md), 분담 분석은 [통합 가이드](docs/operations/DISTRIBUTED_ANALYSIS_V6_KO.md), 구현·검증 범위는 [요구사항 인수 확인](docs/development/V6_REQUIREMENTS_KO.md)과 [실행 기록](validation/test-records/v6/REPORT_KO.md)을 보세요. 품질 경고가 있어도 유효 입력은 계산하되 사유를 남깁니다. 아래 v5/v4 설명은 계승한 이력입니다.
